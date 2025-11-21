@@ -1,0 +1,5 @@
+{
+  "name": "DevOps Assistant",
+  "description": "A specialized interface powered by Google Gemini.",
+  "requestFramePermissions": []
+}
