@@ -13,6 +13,39 @@ import { AppConfig, ChatSession, Toast, Snippet, Message } from './types';
 import { DEFAULT_CONFIG } from './constants';
 import { db, STORES } from './services/db';
 
+const DEFAULT_SNIPPETS: Snippet[] = [
+    {
+        id: 'default-1',
+        title: 'Analyze Error Logs',
+        content: 'I am pasting a server log below. Please analyze it, identify the root cause of the crash, and suggest a fix. Focus on lines with "ERROR" or "FATAL".\n\n[PASTE LOG HERE]'
+    },
+    {
+        id: 'default-2',
+        title: 'K8s Deployment Debug',
+        content: 'My Kubernetes Pod is stuck in "CrashLoopBackOff". \n1. List common reasons for this.\n2. Provide kubectl commands to debug this specific pod.\n3. How do I check liveness/readiness probe failures?'
+    },
+    {
+        id: 'default-3',
+        title: 'Generate Documentation',
+        content: 'Generate a comprehensive README.md for a [LANGUAGE] project.\nInclude sections for: Prerequisites, Installation, Environment Variables, Running Tests, and Deployment.\nUse standard Markdown formatting.'
+    },
+    {
+        id: 'default-4',
+        title: 'Search Knowledge Base',
+        content: 'I need to find information about [TOPIC] in the internal documentation. \nCan you simulate a search query for an Elasticsearch cluster to find relevant documents with high relevance scoring?'
+    },
+    {
+        id: 'default-5',
+        title: 'CI/CD Pipeline Audit',
+        content: 'Review this CI/CD pipeline configuration (GitHub Actions/Jenkins). \nIdentify security risks, caching optimizations, and redundant steps.\n\n[PASTE CONFIG HERE]'
+    },
+    {
+        id: 'default-6',
+        title: 'Explain Complex RegEx',
+        content: 'Explain the following Regular Expression in plain English, breaking it down token by token:\n\n[PASTE REGEX HERE]'
+    }
+];
+
 const App: React.FC = () => {
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
   const [isTerminalMode, setIsTerminalMode] = useState(false);
@@ -32,6 +65,9 @@ const App: React.FC = () => {
   // Advanced Features State
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
+  
+  // Prompt Selection State
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
 
   // 1. Load Data (Config, Sessions, Snippets) on Mount
   useEffect(() => {
@@ -53,13 +89,17 @@ const App: React.FC = () => {
             }
 
             const savedSnippets = await db.getAll(STORES.SNIPPETS) as Snippet[];
-            if (savedSnippets) {
+            if (savedSnippets && savedSnippets.length > 0) {
                 setSnippets(savedSnippets);
+            } else {
+                // Initialize with defaults if empty
+                setSnippets(DEFAULT_SNIPPETS);
             }
         } catch (e) {
             console.error("Failed to load data from IndexedDB", e);
             // Fallback if DB fails
             createNewSession(false);
+            setSnippets(DEFAULT_SNIPPETS);
         } finally {
             setIsLoaded(true);
         }
@@ -262,8 +302,7 @@ const App: React.FC = () => {
             snippets={snippets}
             setSnippets={setSnippets}
             onSelect={(content) => {
-                navigator.clipboard.writeText(content);
-                addToast('Snippet copied to clipboard', 'success');
+                setPendingPrompt(content);
                 setShowPromptLibrary(false);
             }}
         />
@@ -376,6 +415,8 @@ const App: React.FC = () => {
                     onOpenAdmin={() => setShowAdmin(true)}
                     addToast={addToast}
                     onToggleSuggestions={() => setConfig(prev => ({ ...prev, enableSuggestions: !prev.enableSuggestions }))}
+                    pendingPrompt={pendingPrompt}
+                    onPromptLoaded={() => setPendingPrompt(null)}
                 />
             )}
         </div>
