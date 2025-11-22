@@ -28,6 +28,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   
   Your expertise spans the entire software development lifecycle (SDLC): Planning, Coding (Git, Best Practices), Building (CI/CD), Testing, Releasing, Deploying (IaC, Containers, Cloud), Operating, and Monitoring (Observability, SRE).`,
   enableSuggestions: true,
+  enableLogAnalysis: true,
   enableVisualEffects: true,
   maxOutputTokens: 1024,
   contextWindowSize: 1000, // Default context window

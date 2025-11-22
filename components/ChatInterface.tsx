@@ -56,11 +56,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(() => {
     if (textareaRef.current) {
-        // Reset height to 0px to force the browser to calculate the minimal scrollHeight required
-        textareaRef.current.style.height = '0px';
-        const scrollHeight = textareaRef.current.scrollHeight;
-        // Set new height based on content, capped at 200px
-        textareaRef.current.style.height = `${Math.min(scrollHeight, 200)}px`;
+        textareaRef.current.style.height = 'auto';
+        // Limit max height to avoid taking up too much screen
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
   }, [input]);
 
@@ -228,6 +226,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     onSessionUpdate({ messages: newMessages, suggestions: [] });
     
     setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
     
     await triggerStream(newMessages);
   };
@@ -309,7 +308,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         <div className="flex-1 flex flex-col relative min-w-0">
             <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-6 space-y-6 scroll-smooth custom-scrollbar flex flex-col">
-                <div className={`mx-auto w-full h-full flex flex-col ${isZenMode ? 'max-w-4xl' : 'max-w-6xl'}`}>
+                {/* Width Control: Zen Mode = 7xl, Normal = 5xl */}
+                <div className={`mx-auto w-full h-full flex flex-col ${isZenMode ? 'max-w-7xl' : 'max-w-5xl'} transition-all duration-300`}>
                     {messages.map((msg, index) => (
                         <MessageItem 
                           key={msg.id} 
@@ -352,7 +352,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
 
             <div className={`absolute bottom-0 left-0 right-0 pt-4 pb-4 px-4 md:px-6 z-30 ${isTerminalMode ? 'bg-gradient-to-t from-black via-black to-transparent' : 'bg-gradient-to-t from-stc-light via-stc-light to-transparent'}`}>
-                <div className={`mx-auto relative space-y-2 ${isZenMode ? 'max-w-4xl' : 'max-w-6xl'}`}>
+                {/* Input Container Width Control */}
+                <div className={`mx-auto relative space-y-2 ${isZenMode ? 'max-w-7xl' : 'max-w-5xl'} transition-all duration-300`}>
                     
                     {showSlashMenu && filteredCommands.length > 0 && (
                         <div className={`absolute bottom-full mb-2 w-full max-w-md rounded-lg border shadow-2xl overflow-hidden ${
@@ -381,17 +382,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     )}
 
                     <div className={`
-                        relative flex items-end gap-2 p-2 transition-all duration-300 border 
+                        relative flex items-center gap-2 p-2 transition-all duration-300 border 
                         ${isTerminalMode 
                             ? 'bg-black border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)] focus-within:shadow-[0_0_20px_rgba(34,197,94,0.4)]' 
                             : 'bg-white border-stc-purple/20 rounded-xl shadow-xl focus-within:border-stc-coral focus-within:ring-1 focus-within:ring-stc-coral/20'}
                     `}>
                         <button 
                             onClick={onOpenPromptLibrary}
-                            className={`flex-shrink-0 h-7 w-7 flex items-center justify-center rounded hover:bg-opacity-10 transition-colors ${isTerminalMode ? 'text-green-500 hover:bg-green-500' : 'text-stc-purple hover:bg-stc-purple'}`}
+                            className={`flex-shrink-0 h-9 w-9 flex items-center justify-center rounded hover:bg-opacity-10 transition-colors ${isTerminalMode ? 'text-green-500 hover:bg-green-500' : 'text-stc-purple hover:bg-stc-purple'}`}
                             title="Prompt Library"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                         </button>
 
                         <textarea
@@ -402,7 +403,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             placeholder={isTerminalMode ? ">_ Input command (Try / for tools)" : "Ask DevOps Assistant (Type / for commands)..."}
                             rows={1}
                             className={`
-                                flex-1 max-h-64 bg-transparent border-none focus:ring-0 resize-none py-1.5 leading-normal scrollbar-hide text-xs
+                                flex-1 max-h-64 bg-transparent border-none focus:ring-0 resize-none py-1.5 leading-relaxed scrollbar-hide text-lg
                                 ${isTerminalMode 
                                     ? 'text-green-400 placeholder-green-800 font-mono' 
                                     : 'text-stc-purple placeholder-stc-purple/40 font-sans'}
@@ -414,7 +415,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             onClick={() => handleSendMessage()}
                             disabled={!input.trim() || status === ChatStatus.STREAMING}
                             className={`
-                                h-8 w-8 flex items-center justify-center transition-all duration-200
+                                h-10 w-10 flex items-center justify-center transition-all duration-200
                                 ${isTerminalMode 
                                     ? (status === ChatStatus.STREAMING ? 'bg-green-900 text-green-700 cursor-not-allowed' : !input.trim() ? 'bg-green-900/30 text-green-800' : 'bg-green-500 text-black hover:bg-green-400 rounded-sm')
                                     : (status === ChatStatus.STREAMING ? 'bg-stc-purple/50 text-white' : !input.trim() ? 'bg-gray-200 text-gray-400' : 'bg-stc-purple text-white hover:bg-stc-coral shadow-lg rounded-lg')
@@ -424,7 +425,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             {status === ChatStatus.STREAMING ? (
                                 <div className="w-2 h-2 bg-current rounded-sm animate-pulse" />
                             ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                             )}
                         </button>
                     </div>

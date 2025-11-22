@@ -172,6 +172,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                     <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-300 ${localConfig.enableVisualEffects ? 'translate-x-4' : ''}`}></span>
                                 </button>
                             </div>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <span className="text-xs font-bold uppercase opacity-80 block">Enable Log Analysis</span>
+                                    <span className="text-[9px] opacity-60">Allows file drag & drop (Requires high context)</span>
+                                </div>
+                                <button 
+                                    onClick={() => setLocalConfig({...localConfig, enableLogAnalysis: !localConfig.enableLogAnalysis})}
+                                    className={`relative w-8 h-4 rounded-full transition-colors duration-300 ${localConfig.enableLogAnalysis ? (isTerminalMode ? 'bg-green-500' : 'bg-stc-coral') : 'bg-gray-500'}`}
+                                >
+                                    <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-300 ${localConfig.enableLogAnalysis ? 'translate-x-4' : ''}`}></span>
+                                </button>
+                            </div>
                         </div>
                     )}
 

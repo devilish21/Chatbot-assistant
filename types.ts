@@ -15,6 +15,7 @@ export interface AppConfig {
   temperature: number;
   systemInstruction: string;
   enableSuggestions: boolean;
+  enableLogAnalysis?: boolean; // New Feature Toggle
   enableVisualEffects?: boolean;
   maxOutputTokens?: number;
   contextWindowSize?: number;
