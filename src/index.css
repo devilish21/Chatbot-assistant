@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar for terminal feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #150029; 
+}
+::-webkit-scrollbar-thumb {
+  background: #4F008C; 
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FF375E; 
+}
+
+body {
+  background-color: #150029;
+  color: #e2e8f0;
+  margin: 0;
+  overflow: hidden; /* Prevent body scroll, handle in app */
+}
+
+/* Technical Grid Background */
+.bg-grid {
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, rgba(79, 0, 140, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(79, 0, 140, 0.05) 1px, transparent 1px);
+}
+
+/* Terminal Cursor Blink */
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* CRT / Terminal Effects */
+.scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.2) 50%,
+    rgba(0,0,0,0.2)
+  );
+  background-size: 100% 4px;
+  position: absolute;
+  pointer-events: none;
+  z-index: 50;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.glow-text {
+  text-shadow: 0 0 5px rgba(255, 55, 94, 0.5), 0 0 10px rgba(79, 0, 140, 0.3);
+}
+
+.terminal-glow {
+  text-shadow: 0 0 2px rgba(255, 55, 94, 0.5), 0 0 8px rgba(255, 55, 94, 0.3);
+}
+
+/* Scrolling Ticker Animation */
+.animate-ticker {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Matrix Canvas positioning */
+#matrix-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+/* Modal Backdrop */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+/* Utility to mask ticker fade */
+.mask-linear-fade {
+    mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
+}
