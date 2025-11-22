@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Message } from '../types';
 import { CodeBlock } from './CodeBlock';
 
@@ -8,11 +8,9 @@ interface MessageItemProps {
   isStreaming?: boolean;
   isTerminalMode: boolean;
   onEdit?: (messageId: string, newContent: string) => void;
-  onExecutionResult?: (result: { success: boolean; output: string }) => void;
-  onNodeClick?: (text: string) => void;
 }
 
-export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, onEdit, onExecutionResult, onNodeClick }: MessageItemProps) => {
+const MessageItemComponent = ({ message, isStreaming, isTerminalMode, onEdit }: MessageItemProps) => {
   const isUser = message.role === 'user';
   const [isCopied, setIsCopied] = useState(false);
   
@@ -59,94 +57,98 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
       }
   };
 
-  // Basic custom Markdown parser
-  const renderContent = (text: string) => {
-    const parts = [];
-    const codeBlockRegex = /```(\w+)?\s*([\s\S]*?)```/g;
-    let lastIndex = 0;
-    let match;
+  // MEMOIZED CONTENT RENDERING
+  // This parsing logic is heavy (regex + recursive splitting). 
+  // useMemo ensures we only run it when content or visual mode changes.
+  const parsedContent = useMemo(() => {
+      const text = message.content;
 
-    while ((match = codeBlockRegex.exec(text)) !== null) {
-      if (match.index > lastIndex) {
+      // 1. Jira Ticket Renderer (Helper)
+      const renderJiraTicket = (ticketId: string, key: string) => (
+        <div key={key} className={`inline-flex items-center gap-2 px-2 py-1 mx-1 rounded border align-middle select-none cursor-pointer transition-all hover:scale-105 ${
+            isTerminalMode 
+                ? 'bg-green-900/40 border-green-500/50 text-green-400 hover:bg-green-900/60' 
+                : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+        }`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M11.5 10L5.1 16.4C4.3 17.2 4.3 18.5 5.1 19.3C5.9 20.1 7.2 20.1 8 19.3L14.4 12.9V10H11.5Z"/><path d="M11.5 2L5.1 8.4C4.3 9.2 4.3 10.5 5.1 11.3C5.9 12.1 7.2 12.1 8 11.3L14.4 4.9V2H11.5Z"/></svg>
+            <span className="font-bold text-[10px]">{ticketId}</span>
+            <span className="text-[8px] opacity-70 border-l pl-1 border-current">IN_PROGRESS</span>
+        </div>
+      );
+
+      // 2. Inline Formatting Parser
+      const parseInlineFormatting = (inlineText: string) => {
+        const elements: (string | React.ReactElement)[] = [];
+        const ticketRegex = /([A-Z]{2,6}-\d{1,5})/g;
+        const ticketParts = inlineText.split(ticketRegex);
+
+        ticketParts.forEach((part, tIdx) => {
+            if (part.match(/^[A-Z]{2,6}-\d{1,5}$/)) {
+                elements.push(renderJiraTicket(part, `ticket-${tIdx}`));
+                return;
+            }
+            const inlineParts = part.split(/`([^`]+)`/g);
+            inlineParts.forEach((inlinePart, i) => {
+                if (i % 2 === 1) {
+                    elements.push(
+                        <code key={`code-${tIdx}-${i}`} className={`
+                            px-1 py-0.5 rounded text-xs font-mono border
+                            ${isTerminalMode 
+                                ? 'bg-green-900/30 text-green-400 border-green-500/50 rounded-none' 
+                                : 'bg-stc-purple/10 text-stc-purple border-stc-purple/20'}
+                        `}>
+                            {inlinePart}
+                        </code>
+                    );
+                } else {
+                    const boldParts = inlinePart.split(/\*\*(.*?)\*\*/g);
+                    boldParts.forEach((subPart, j) => {
+                        if (j % 2 === 1) {
+                            elements.push(<strong key={`bold-${tIdx}-${i}-${j}`} className={isTerminalMode ? "text-green-400 font-bold" : "text-stc-purple font-bold"}>{subPart}</strong>);
+                        } else {
+                            elements.push(subPart);
+                        }
+                    });
+                }
+            });
+        });
+        return elements;
+      };
+
+      // 3. Main Content Splitter (Code Blocks)
+      const parts = [];
+      const codeBlockRegex = /```(\w+)?\s*([\s\S]*?)```/g;
+      let lastIndex = 0;
+      let match;
+
+      while ((match = codeBlockRegex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+          parts.push(
+            <span key={`text-${lastIndex}`} className="whitespace-pre-wrap animate-in fade-in duration-300">
+              {parseInlineFormatting(text.substring(lastIndex, match.index))}
+            </span>
+          );
+        }
+        parts.push(
+          <CodeBlock 
+            key={`code-${match.index}`} 
+            language={match[1] || ''} 
+            code={match[2]} 
+          />
+        );
+        lastIndex = match.index + match[0].length;
+      }
+
+      if (lastIndex < text.length) {
         parts.push(
           <span key={`text-${lastIndex}`} className="whitespace-pre-wrap animate-in fade-in duration-300">
-            {parseInlineFormatting(text.substring(lastIndex, match.index))}
+             {parseInlineFormatting(text.substring(lastIndex))}
           </span>
         );
       }
-      parts.push(
-        <CodeBlock 
-          key={`code-${match.index}`} 
-          language={match[1] || ''} 
-          code={match[2]} 
-          autoRun={!!onExecutionResult}
-          onExecutionComplete={onExecutionResult}
-          onNodeClick={onNodeClick}
-        />
-      );
-      lastIndex = match.index + match[0].length;
-    }
+      return parts;
 
-    if (lastIndex < text.length) {
-      parts.push(
-        <span key={`text-${lastIndex}`} className="whitespace-pre-wrap animate-in fade-in duration-300">
-           {parseInlineFormatting(text.substring(lastIndex))}
-        </span>
-      );
-    }
-    return parts;
-  };
-
-  // Helper to render Jira Ticket Card
-  const renderJiraTicket = (ticketId: string, key: string) => (
-    <div key={key} className={`inline-flex items-center gap-2 px-2 py-1 mx-1 rounded border align-middle select-none cursor-pointer transition-all hover:scale-105 ${
-        isTerminalMode 
-            ? 'bg-green-900/40 border-green-500/50 text-green-400 hover:bg-green-900/60' 
-            : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
-    }`}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M11.5 10L5.1 16.4C4.3 17.2 4.3 18.5 5.1 19.3C5.9 20.1 7.2 20.1 8 19.3L14.4 12.9V10H11.5Z"/><path d="M11.5 2L5.1 8.4C4.3 9.2 4.3 10.5 5.1 11.3C5.9 12.1 7.2 12.1 8 11.3L14.4 4.9V2H11.5Z"/></svg>
-        <span className="font-bold text-[10px]">{ticketId}</span>
-        <span className="text-[8px] opacity-70 border-l pl-1 border-current">IN_PROGRESS</span>
-    </div>
-  );
-
-  const parseInlineFormatting = (text: string) => {
-    const elements: (string | React.ReactElement)[] = [];
-    const ticketRegex = /([A-Z]{2,6}-\d{1,5})/g;
-    const ticketParts = text.split(ticketRegex);
-
-    ticketParts.forEach((part, tIdx) => {
-        if (part.match(/^[A-Z]{2,6}-\d{1,5}$/)) {
-            elements.push(renderJiraTicket(part, `ticket-${tIdx}`));
-            return;
-        }
-        const inlineParts = part.split(/`([^`]+)`/g);
-        inlineParts.forEach((inlinePart, i) => {
-            if (i % 2 === 1) {
-                elements.push(
-                    <code key={`code-${tIdx}-${i}`} className={`
-                        px-1 py-0.5 rounded text-xs font-mono border
-                        ${isTerminalMode 
-                            ? 'bg-green-900/30 text-green-400 border-green-500/50 rounded-none' 
-                            : 'bg-stc-purple/10 text-stc-purple border-stc-purple/20'}
-                    `}>
-                        {inlinePart}
-                    </code>
-                );
-            } else {
-                const boldParts = inlinePart.split(/\*\*(.*?)\*\*/g);
-                boldParts.forEach((subPart, j) => {
-                    if (j % 2 === 1) {
-                        elements.push(<strong key={`bold-${tIdx}-${i}-${j}`} className={isTerminalMode ? "text-green-400 font-bold" : "text-stc-purple font-bold"}>{subPart}</strong>);
-                    } else {
-                        elements.push(subPart);
-                    }
-                });
-            }
-        });
-    });
-    return elements;
-  };
+  }, [message.content, isTerminalMode]); // Only re-run if content or mode changes
 
   // Terminal Mode Style (Hacker Green)
   if (isTerminalMode) {
@@ -203,7 +205,7 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
                         </div>
                     ) : (
                         <div className={`text-sm leading-relaxed text-green-400 ${message.isError ? 'text-red-500' : ''}`}>
-                            {renderContent(message.content)}
+                            {parsedContent}
                             {isStreaming && <span className="inline-block w-2 h-4 ml-1 align-middle cursor-blink bg-green-500"></span>}
                         </div>
                     )}
@@ -287,7 +289,7 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
                         </div>
                     ) : (
                         <>
-                            {renderContent(message.content)}
+                            {parsedContent}
                             {isStreaming && (
                                 <span className="inline-flex ml-1 translate-y-0.5">
                                     <span className="w-1 h-1 bg-current rounded-full animate-bounce"></span>
@@ -302,4 +304,16 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
         </div>
     </div>
   );
+};
+
+// Optimized equality comparison
+export const MessageItem = React.memo(MessageItemComponent, (prevProps, nextProps) => {
+    return (
+        prevProps.message.content === nextProps.message.content &&
+        prevProps.isStreaming === nextProps.isStreaming &&
+        prevProps.message.isError === nextProps.message.isError &&
+        prevProps.isTerminalMode === nextProps.isTerminalMode
+        // onEdit is now referentially stable from parent, so we can either include it or ignore it safely.
+        // ignoring it here assumes it never changes, which is true with the Ref pattern in ChatInterface.
+    );
 });

@@ -9,7 +9,7 @@ import { ToastContainer } from './components/Toast';
 import { PromptLibrary } from './components/PromptLibrary';
 import { AdminPanel } from './components/AdminPanel';
 import { ToolsModal } from './components/ToolsModal';
-import { AppConfig, ChatSession, Toast, Snippet } from './types';
+import { AppConfig, ChatSession, Toast, Snippet, Message } from './types';
 import { DEFAULT_CONFIG } from './constants';
 import { db, STORES } from './services/db';
 
@@ -68,13 +68,6 @@ const App: React.FC = () => {
   }, []);
 
   // 2. Persistence Effects
-  
-  // Persist Sessions: We only update the CHANGED session ideally, 
-  // but for simplicity in this step we will bulk put for now or handle granularly later.
-  // Given react strict mode, we should be careful.
-  // Note: 'sessions' updates frequently. Saving all every time is costly.
-  // We rely on onSessionUpdate handlers to save individual sessions if possible,
-  // but here we will use a debounced save for the whole array or just the active one.
   useEffect(() => {
       if (!isLoaded) return;
       const timeout = setTimeout(() => {
@@ -150,6 +143,39 @@ const App: React.FC = () => {
     addToast('Session deleted', 'info');
   };
 
+  // --- STRESS TEST LOGIC ---
+  const handleStressTest = () => {
+      const start = performance.now();
+      addToast('Generating 1000 messages...', 'info');
+      
+      // 1. Generate 1000 dummy messages
+      const stressMessages: Message[] = Array.from({ length: 1000 }).map((_, i) => ({
+          id: `stress-${Date.now()}-${i}`,
+          role: i % 2 === 0 ? 'user' : 'model',
+          content: i % 2 === 0 
+            ? `Stress Test Message #${i}: Simulating user input to test DOM rendering.` 
+            : `Response #${i}: Simulating AI response. **Bold**, \`Code\`, and [Complex Data] rendering check.`,
+          timestamp: Date.now() + i
+      }));
+
+      // 2. Inject into active session
+      setSessions(prev => prev.map(s => {
+          if (s.id === activeSessionId) {
+              return { ...s, messages: stressMessages };
+          }
+          return s;
+      }));
+
+      // 3. Measure paint time
+      // We use setTimeout(0) to let React schedule the update, then measure after it finishes
+      setTimeout(() => {
+          const duration = performance.now() - start;
+          const fps = 1000 / duration;
+          addToast(`Rendered 1000 nodes in ${duration.toFixed(2)}ms`, duration < 100 ? 'success' : 'error');
+          console.log(`[Stress Test] Count: 1000 | Time: ${duration.toFixed(2)}ms | Approx FPS impact: ${fps.toFixed(1)}`);
+      }, 0);
+  };
+
   const addToast = (message: string, type: 'info' | 'success' | 'error' = 'info') => {
       const id = Date.now().toString();
       setToasts(prev => [...prev, { id, message, type }]);
@@ -161,8 +187,12 @@ const App: React.FC = () => {
   // Memoized derived state
   const activeSession = React.useMemo(() => sessions.find(s => s.id === activeSessionId) || sessions[0], [sessions, activeSessionId]);
   
+  // Performance Optimization: Avoid JSON.stringify for large token calc
   const tokenUsage = React.useMemo(() => {
-      return activeSession ? Math.ceil(JSON.stringify(activeSession.messages).length / 4) : 0;
+      if (!activeSession) return 0;
+      // Rough estimation: 1 token ~= 4 characters. Summing lengths is O(n) vs JSON.stringify which allocates large string.
+      const totalChars = activeSession.messages.reduce((acc, msg) => acc + (msg.content ? msg.content.length : 0), 0);
+      return Math.ceil(totalChars / 4);
   }, [activeSession]);
 
   const themeClasses = isTerminalMode 
@@ -211,6 +241,7 @@ const App: React.FC = () => {
                 { id: 'manual', title: 'Open User Manual', shortcut: ['?'], action: () => setShowManual(true) },
                 { id: 'admin', title: 'Admin Console', action: () => setShowAdmin(true) },
                 { id: 'snippets', title: 'Open Prompt Library', shortcut: ['P'], action: () => setShowPromptLibrary(true) },
+                { id: 'stress', title: 'Debug: Run UI Stress Test (1000 items)', action: handleStressTest }, // Added Stress Test
                 ...sessions.map(s => ({ 
                     id: s.id, 
                     title: `Switch to: ${s.title}`, 

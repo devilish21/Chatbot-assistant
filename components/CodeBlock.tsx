@@ -31,10 +31,10 @@ const DiffViewer: React.FC<{ original: string; modified: string }> = ({ original
         
         rows.push(
             <div key={i} className={`grid grid-cols-2 gap-2 text-[10px] font-mono leading-tight ${isDiff ? 'bg-white/5' : ''}`}>
-                <div className={`p-1 overflow-hidden whitespace-pre ${isDiff && oldL ? 'bg-red-900/20 text-red-400' : 'text-gray-500'}`}>
+                <div className={`p-1 overflow-hidden whitespace-pre ${isDiff && oldL ? 'bg-red-900/20 text-red-300' : 'text-gray-400'}`}>
                     {oldL}
                 </div>
-                <div className={`p-1 overflow-hidden whitespace-pre ${isDiff && newL ? 'bg-green-900/20 text-green-400' : 'text-gray-400'}`}>
+                <div className={`p-1 overflow-hidden whitespace-pre ${isDiff && newL ? 'bg-green-900/20 text-green-300' : 'text-gray-300'}`}>
                     {newL}
                 </div>
             </div>
@@ -180,12 +180,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, autoRun, o
       );
   }
 
-  const highlightSyntax = (codeString: string) => {
-    // ... (Same regex highlighter as before, kept concise for brevity)
-    // Re-using existing logic or simplified version:
-    return <span className="text-slate-300">{codeString}</span>; 
-  };
-
   return (
     <div className="my-3 rounded border border-stc-purple/30 bg-[#0b0214] w-full overflow-hidden shadow-md group/code">
       {/* Header */}
@@ -210,7 +204,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, autoRun, o
       
       {/* Code Area */}
       <div className="p-3 overflow-x-auto custom-scrollbar">
-        <pre className="text-xs font-mono leading-snug">
+        <pre className="text-xs font-mono leading-snug text-slate-300">
             {code}
         </pre>
       </div>
