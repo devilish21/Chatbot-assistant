@@ -77,6 +77,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
             let remaining = part.text;
             token.regex.lastIndex = 0;
             
+            let match;
             const split = remaining.split(token.regex);
             const matches = remaining.match(token.regex);
             
