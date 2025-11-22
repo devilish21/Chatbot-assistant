@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { ChatInterface } from './components/ChatInterface';
 import { SessionSidebar } from './components/SessionSidebar';
 import { Footer } from './components/Footer';
@@ -8,6 +7,7 @@ import { UserManual } from './components/UserManual';
 import { ToastContainer } from './components/Toast';
 import { PromptLibrary } from './components/PromptLibrary';
 import { AdminPanel } from './components/AdminPanel';
+import { ToolsModal } from './components/ToolsModal';
 import { AppConfig, ChatSession, Toast, Snippet } from './types';
 import { DEFAULT_CONFIG } from './constants';
 
@@ -29,27 +29,21 @@ const App: React.FC = () => {
   const [showManual, setShowManual] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showPromptLibrary, setShowPromptLibrary] = useState(false);
+  const [showTools, setShowTools] = useState(false);
 
   // Advanced Features State
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
 
-  // Matrix Rain Canvas Ref
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
   // 1. Load Data (Config, Sessions, Snippets) on Mount
   useEffect(() => {
-    // A. Load LocalStorage Config (User Preferences / Admin Overrides)
     const savedConfig = localStorage.getItem(CONFIG_KEY);
     if (savedConfig) {
         try {
-            // We merge saved config with DEFAULT_CONFIG to ensure new keys in constants.ts are picked up
             setConfig(prev => ({...prev, ...JSON.parse(savedConfig)}));
         } catch(e) { console.error("Config parse error", e); }
     }
 
-    // B. Load Sessions (Non-blocking parsing)
-    // We use a timeout to allow the initial UI to paint before parsing potentially large JSON
     setTimeout(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
@@ -71,7 +65,6 @@ const App: React.FC = () => {
         setIsLoaded(true);
     }, 10);
 
-    // C. Load Snippets
     const savedSnippets = localStorage.getItem(SNIPPETS_KEY);
     if (savedSnippets) {
         try {
@@ -92,62 +85,8 @@ const App: React.FC = () => {
   }, [snippets]);
 
   useEffect(() => {
-      // We still save to local storage so edits persist for the Admin user immediately
       localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
   }, [config]);
-
-  // 3. Matrix Rain Animation Effect (Only if enabled in config)
-  useEffect(() => {
-    // If Visual Effects are disabled, do not run the canvas loop
-    if (config.enableVisualEffects === false) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set explicit dimensions
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const chars = '01ABCDEFSTC'; 
-    const fontSize = 14;
-    const columns = Math.ceil(canvas.width / fontSize);
-    const drops: number[] = new Array(columns).fill(1);
-
-    const draw = () => {
-      ctx.fillStyle = isTerminalMode ? 'rgba(0, 0, 0, 0.1)' : 'rgba(249, 247, 252, 0.1)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = isTerminalMode ? '#22c55e' : '#4F008C'; 
-      ctx.font = `${fontSize}px monospace`;
-
-      for (let i = 0; i < drops.length; i++) {
-        const text = chars.charAt(Math.floor(Math.random() * chars.length));
-        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-          drops[i] = 0;
-        }
-        drops[i]++;
-      }
-    };
-
-    const interval = setInterval(draw, 50);
-
-    const handleResize = () => {
-        if (canvas) {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-    };
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-        clearInterval(interval);
-        window.removeEventListener('resize', handleResize);
-    };
-  }, [isTerminalMode, config.enableVisualEffects]);
 
   const createNewSession = (shouldToast = true) => {
     const welcomeMsg = config.welcomeMessage || DEFAULT_CONFIG.welcomeMessage;
@@ -222,20 +161,12 @@ const App: React.FC = () => {
     ? "border-b border-green-500/50 bg-black/90"
     : "border-b border-stc-purple/10 bg-stc-white/80";
 
-  // Loading State (Initial)
   if (!activeSession && !isLoaded) return <div className={`h-screen w-full ${isTerminalMode ? 'bg-black' : 'bg-stc-light'}`}></div>;
 
   return (
     <div className={`relative flex h-screen w-full overflow-hidden transition-colors duration-300 ${themeClasses}`}>
       
-      {config.enableVisualEffects !== false && (
-          <canvas id="matrix-canvas" ref={canvasRef} className="absolute inset-0 z-0"></canvas>
-      )}
-
-      {config.enableVisualEffects !== false && (
-          <div className={`scanlines pointer-events-none fixed inset-0 z-[100] opacity-20 transition-opacity duration-500 ${isTerminalMode ? 'block' : 'hidden'}`}></div>
-      )}
-      
+      {/* Static Background Layers */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <div className={`absolute inset-0 bg-grid transition-opacity duration-500 ${isTerminalMode ? 'opacity-10' : 'opacity-5'}`}></div>
         <div className={`absolute inset-0 bg-gradient-to-b via-transparent opacity-60 ${isTerminalMode ? 'from-black/80 to-black/80' : 'from-stc-purple-deep/10 to-stc-purple-deep/10'}`}></div>
@@ -245,9 +176,8 @@ const App: React.FC = () => {
         
         <ToastContainer toasts={toasts} isTerminalMode={isTerminalMode} />
 
-        {/* GLOBAL SYSTEM ALERT BANNER */}
         {config.systemAlert && (
-            <div className={`w-full px-4 py-2 flex items-center justify-center gap-3 text-xs font-bold uppercase tracking-wider animate-in slide-in-from-top z-50 ${
+            <div className={`w-full px-4 py-2 flex items-center justify-center gap-3 text-xs font-bold uppercase tracking-wider z-50 ${
                 isTerminalMode 
                     ? 'bg-red-900/80 text-white border-b border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' 
                     : 'bg-yellow-400 text-stc-purple-dark border-b border-yellow-500'
@@ -264,6 +194,7 @@ const App: React.FC = () => {
             actions={[
                 { id: 'new', title: 'New Session', shortcut: ['N'], action: () => createNewSession(true) },
                 { id: 'zen', title: 'Toggle Zen Mode', shortcut: ['Z'], action: () => setIsZenMode(!isZenMode) },
+                { id: 'tools', title: 'YAML/JSON Validator', shortcut: ['J'], action: () => setShowTools(true) },
                 { id: 'toggle', title: 'Toggle Terminal Mode', shortcut: ['T'], action: () => setIsTerminalMode(!isTerminalMode) },
                 { id: 'manual', title: 'Open User Manual', shortcut: ['?'], action: () => setShowManual(true) },
                 { id: 'admin', title: 'Admin Console', action: () => setShowAdmin(true) },
@@ -293,6 +224,12 @@ const App: React.FC = () => {
                 setShowPromptLibrary(false);
             }}
         />
+        <ToolsModal 
+            isOpen={showTools}
+            onClose={() => setShowTools(false)}
+            isTerminalMode={isTerminalMode}
+            addToast={addToast}
+        />
         
         <AdminPanel 
             isOpen={showAdmin}
@@ -321,6 +258,15 @@ const App: React.FC = () => {
              >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
                 <span className="text-[10px] font-bold uppercase tracking-wider">Zen Mode</span>
+             </button>
+
+             <button 
+                onClick={() => setShowTools(true)}
+                className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${isTerminalMode ? 'border-green-500 text-green-500 hover:bg-green-900/30' : 'border-stc-purple/20 text-stc-purple hover:bg-stc-purple hover:text-white'}`}
+                title="YAML/JSON Tools"
+             >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                <span className="text-[10px] font-bold uppercase tracking-wider">Tools</span>
              </button>
 
              <button 

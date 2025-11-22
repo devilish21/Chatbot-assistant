@@ -2,7 +2,7 @@
 import { GoogleGenAI, Content, GenerateContentResponse } from "@google/genai";
 import { AppConfig, Message } from "../types";
 
-export const validateEndpoint = (_url: string): boolean => {
+export const validateEndpoint = (url: string): boolean => {
   return true;
 };
 

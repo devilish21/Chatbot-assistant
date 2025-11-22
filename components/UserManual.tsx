@@ -24,6 +24,24 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
     return `px-4 py-2 text-xs font-bold border-b-2 transition-colors ${isActive ? 'border-stc-coral text-stc-purple bg-stc-purple/5' : 'border-transparent text-gray-400 hover:text-stc-purple'}`;
   };
 
+  const FeatureCard = ({ title, icon, description, usage }: { title: string, icon: React.ReactNode, description: string, usage: string }) => (
+    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
+        <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm">{title}</h3>
+            <div className={`w-6 h-6 flex items-center justify-center rounded border ${isTerminalMode ? 'border-green-500' : 'border-stc-purple/30'}`}>
+                {icon}
+            </div>
+        </div>
+        <p className="text-xs opacity-70 leading-relaxed">
+            {description}
+        </p>
+        <div className={`mt-2 pt-3 border-t text-[10px] ${isTerminalMode ? 'border-green-500/30' : 'border-stc-purple/10'}`}>
+            <span className="font-bold uppercase opacity-50 mr-2">How to use:</span>
+            <span className="opacity-90">{usage}</span>
+        </div>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
       <div 
@@ -34,7 +52,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
         <div className={`flex items-center justify-between px-6 py-4 border-b ${isTerminalMode ? 'border-green-500/50 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
             <div className="flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-                <h2 className="text-lg font-bold tracking-wider">DEVOPS CHATBOT MANUAL v2.5</h2>
+                <h2 className="text-lg font-bold tracking-wider">DEVOPS CHATBOT MANUAL v2.9</h2>
             </div>
             <button onClick={onClose} className="hover:opacity-70 transition-opacity">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -70,10 +88,10 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
                         <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
                             <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                Admin Control
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                                Utilities Suite
                             </h3>
-                            <p className="text-xs opacity-70">Secure configuration hub to manage token limits, context windows, and system personas via the <code>/admin</code> command.</p>
+                            <p className="text-xs opacity-70">Built-in validators for YAML, JSON formatting, and Base64 encoding/decoding without leaving the app.</p>
                         </div>
                         <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
                             <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
@@ -97,69 +115,78 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
             {activeTab === 'features' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4 duration-300">
                     
-                    {/* Admin Console */}
-                    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm">Admin Console</h3>
-                            <kbd className={`px-1.5 py-0.5 rounded text-[10px] border ${isTerminalMode ? 'border-green-500' : 'border-stc-purple/30'}`}>/admin</kbd>
-                        </div>
-                        <p className="text-xs opacity-70 leading-relaxed">
-                            A restricted area to fine-tune the LLM. Adjust the <strong>Max Output Tokens</strong> (response length) and <strong>Context Window Size</strong> (memory capacity) to optimize for performance or depth.
-                        </p>
-                    </div>
+                    <FeatureCard 
+                        title="DevOps Utilities" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>}
+                        description="A suite of client-side tools for validating K8s manifests (YAML), formatting JSON payloads, and handling Base64 secrets."
+                        usage="Click the 'Tools' button in the header, or press Ctrl+K and select 'YAML/JSON Validator'. Paste your content into the left pane."
+                    />
 
-                    {/* Prompt Library */}
-                    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm">Snippet Repository</h3>
-                            <div className={`w-5 h-5 flex items-center justify-center rounded border ${isTerminalMode ? 'border-green-500' : 'border-stc-purple/30'}`}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg>
-                            </div>
-                        </div>
-                        <p className="text-xs opacity-70 leading-relaxed">
-                            Access the library via the Book icon. Save frequently used prompt templates or code blocks. Inject them into the chat with a single click.
-                        </p>
-                    </div>
+                    <FeatureCard 
+                        title="Admin Console" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
+                        description="Restricted area to configure LLM parameters (Max Tokens, Context Window) and broadcast system alerts."
+                        usage="Type '/admin' in the chat input and press Enter. Default credentials are 'admin' / 'admin123'."
+                    />
 
-                    {/* Internal Tools */}
-                    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm">Infrastructure Hub</h3>
-                            <span className="text-[10px] font-mono opacity-50">RIGHT_RAIL</span>
-                        </div>
-                        <p className="text-xs opacity-70 leading-relaxed">
-                            Navigate internal services (Jenkins, Nexus, SonarQube) via the right sidebar. Expand services to see specific instances and URLs.
-                        </p>
-                    </div>
+                    <FeatureCard 
+                        title="Prompt Library" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg>}
+                        description="Save frequently used templates or complex queries. Inject them into the chat with a single click."
+                        usage="Click the Book icon inside the input bar. Use '+ New Snippet' to save current text, or click a saved item to load it."
+                    />
 
-                    {/* Zen Mode */}
-                    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm">Zen Mode</h3>
-                            <span className="text-[10px] font-mono opacity-50">HEADER_BTN</span>
-                        </div>
-                        <p className="text-xs opacity-70 leading-relaxed">
-                            Toggle "Zen Mode" in the header to collapse all sidebars and focus purely on the chat interface and code generation.
-                        </p>
-                    </div>
+                    <FeatureCard 
+                        title="Context Branching" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}
+                        description="Edit any previous user message to create a new conversation branch, exploring different scenarios from that point."
+                        usage="Hover over your previous message bubble. Click the 'Edit' (pencil) icon, modify the text, and click 'Save & Regenerate'."
+                    />
 
-                    {/* Session Management */}
-                    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm">Session History</h3>
-                            <span className="text-[10px] font-mono opacity-50">LEFT_RAIL</span>
-                        </div>
-                        <p className="text-xs opacity-70 leading-relaxed">
-                            Rename sessions by hovering and clicking the Pencil icon. Delete old logs with the Trash icon. History is persisted locally.
-                        </p>
-                    </div>
+                    <FeatureCard 
+                        title="Log Analysis" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>}
+                        description="Drag and drop files directly into the window to have the AI analyze logs, configs, or code files."
+                        usage="Drag a .log, .json, .yaml, or .txt file from your desktop into the chat window. The content will automatically load into the input."
+                    />
+
+                    <FeatureCard 
+                        title="Infrastructure Hub" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>}
+                        description="Quick navigation to internal services like Jenkins, Nexus, and SonarQube."
+                        usage="Open the right sidebar (desktop only). Click a service icon to reveal direct links to specific instances."
+                    />
                 </div>
             )}
 
             {/* TAB: COMMANDS */}
             {activeTab === 'commands' && (
                 <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
-                    <p className="text-sm opacity-80">
+                    
+                    {/* Keyboard Shortcuts Table */}
+                    <div>
+                        <h3 className={`text-sm font-bold border-b pb-2 mb-3 ${isTerminalMode ? 'border-green-500 text-green-500' : 'border-stc-purple text-stc-purple'}`}>Keyboard Shortcuts</h3>
+                        <div className="grid grid-cols-2 gap-4 text-xs">
+                            <div className="flex justify-between p-2 border rounded border-opacity-20">
+                                <span>Command Palette</span>
+                                <kbd className="font-mono opacity-70 bg-white/10 px-1 rounded">Ctrl + K</kbd>
+                            </div>
+                            <div className="flex justify-between p-2 border rounded border-opacity-20">
+                                <span>Focus Input</span>
+                                <kbd className="font-mono opacity-70 bg-white/10 px-1 rounded">Ctrl + /</kbd>
+                            </div>
+                            <div className="flex justify-between p-2 border rounded border-opacity-20">
+                                <span>Edit Last Message</span>
+                                <kbd className="font-mono opacity-70 bg-white/10 px-1 rounded">Arrow Up</kbd>
+                            </div>
+                            <div className="flex justify-between p-2 border rounded border-opacity-20">
+                                <span>Toggle Terminal Mode</span>
+                                <kbd className="font-mono opacity-70 bg-white/10 px-1 rounded">Alt + T</kbd>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p className="text-sm opacity-80 mt-6">
                         Type <code className={`px-1.5 py-0.5 rounded font-bold ${isTerminalMode ? 'bg-green-900 text-green-400' : 'bg-stc-purple text-white'}`}>/</code> in the input box to access quick templates.
                     </p>
 
@@ -219,8 +246,8 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                         </div>
                          <ul className="text-xs space-y-1 opacity-70 list-disc list-inside">
                             <li>Monospace typography</li>
-                            <li>CRT Scanline effects</li>
-                            <li>Matrix Rain background</li>
+                            <li>CRT Scanline effects (Optional)</li>
+                            <li>Matrix Rain background (Optional)</li>
                         </ul>
                     </div>
                 </div>

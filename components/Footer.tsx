@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 
 interface FooterProps {
@@ -110,26 +109,10 @@ export const Footer: React.FC<FooterProps> = ({ isTerminalMode, tokenUsage = 0, 
             <span className={highlightClass}>{bootTime}</span>
         </div>
 
-        {/* Scrolling Log Ticker */}
-        <div className="flex-1 overflow-hidden relative h-full flex items-center mask-linear-fade bg-opacity-10 pl-4">
-             <div className={`${enableVisualEffects ? 'animate-ticker' : ''} whitespace-nowrap flex gap-8 opacity-70 hover:opacity-100 transition-opacity`}>
-                {SYSTEM_LOGS.map((log, i) => (
-                    <span key={i} className="inline-flex items-center gap-2">
-                        <span className="opacity-50">::</span>
-                        {log}
-                    </span>
-                ))}
-                {enableVisualEffects && SYSTEM_LOGS.map((log, i) => (
-                    <span key={`dup-${i}`} className="inline-flex items-center gap-2">
-                        <span className="opacity-50">::</span>
-                        {log}
-                    </span>
-                ))}
-             </div>
-        </div>
+
 
         {/* Right Info Column */}
-        <div className={`h-full flex items-center px-4 border-l ${dividerClass} bg-opacity-10`}>
+        <div className={`h-full flex items-center px-4 border-l ${dividerClass} bg-opacity-10 ml-auto`}>
             <span className="opacity-50 mr-2">v2.5.0</span>
             <span className={`font-bold ${isTerminalMode ? 'text-green-500' : 'text-stc-purple'}`}>CORE</span>
         </div>

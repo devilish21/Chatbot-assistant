@@ -247,7 +247,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       // 4. Construct new history
       const newHistory = [...historyPrefix, updatedMessage];
-      onSessionUpdate({ messages: newHistory, suggestions: [] });
+      onSessionUpdate({ messages: newHistory });
 
       // 5. Re-trigger streaming from this point
       addToast("Regenerating response...", "info");
