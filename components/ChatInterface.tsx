@@ -4,7 +4,7 @@ import { streamChatCompletion, generateFollowUpQuestions } from '../services/gem
 import { AppConfig, Message, ChatStatus, ChatSession, SlashCommand } from '../types';
 import { MessageItem } from './MessageItem';
 import { SuggestionRail } from './SuggestionRail';
-import { SLASH_COMMANDS, GRAMMARS } from '../constants';
+import { SLASH_COMMANDS } from '../constants';
 
 interface ChatInterfaceProps {
   config: AppConfig;
@@ -56,14 +56,18 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(() => {
     if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+        // Reset height to 0px to force the browser to calculate the minimal scrollHeight required
+        textareaRef.current.style.height = '0px';
+        const scrollHeight = textareaRef.current.scrollHeight;
+        // Set new height based on content, capped at 200px
+        textareaRef.current.style.height = `${Math.min(scrollHeight, 200)}px`;
     }
   }, [input]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
+          // Ctrl+/ to focus input
           if ((e.ctrlKey || e.metaKey) && e.key === '/') {
               e.preventDefault();
               textareaRef.current?.focus();
@@ -127,34 +131,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
   };
 
-  // --- AGENTIC LOOP LOGIC ---
-  // This callback is triggered by CodeBlock execution
-  const handleExecutionComplete = async (result: { success: boolean; output: string }) => {
-      if (!config.agentMode) return;
-      
-      // Avoid triggering loop if already busy, though in a real agent system we might queue
-      if (status === ChatStatus.STREAMING) return;
-
-      if (!result.success) {
-          const fixPrompt = `The code execution failed with the following error:\n\`\`\`\n${result.output}\n\`\`\`\nPlease analyze the error and rewrite the code to fix it. Return ONLY the fixed code.`;
-          
-          addToast("Agentic Loop: Auto-fixing error...", "info");
-          
-          // Trigger send message automatically
-          await handleSendMessage(fixPrompt);
-      }
-  };
-
-  // --- CONTEXT INJECTION ---
-  const handleNodeClick = (text: string) => {
-      setInput(prev => {
-          const prefix = prev.trim() ? prev.trim() + ' ' : '';
-          return prefix + text; 
-      });
-      textareaRef.current?.focus();
-      addToast(`Added "${text}" to input`, 'info');
-  };
-
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     if (status === ChatStatus.IDLE && lastMsg?.role === 'model' && !lastMsg.isError && lastMsg.content) {
@@ -174,6 +150,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [status, messages, config]);
 
+  // Internal stream handler to avoid duplication
   const triggerStream = async (historyToUse: Message[]) => {
       setStatus(ChatStatus.STREAMING);
       const responseId = (Date.now() + 1).toString();
@@ -188,22 +165,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       onSessionUpdate({ messages: currentMessagesWithModel });
 
       try {
-        // --- GRAMMAR/SCHEMA DETECTION ---
-        const lastUserMsg = historyToUse[historyToUse.length - 1];
-        let schemaToUse = undefined;
-        
-        if (lastUserMsg && lastUserMsg.role === 'user') {
-             if (lastUserMsg.content.startsWith('/diff') || lastUserMsg.content.includes('JSON diff')) {
-                 schemaToUse = GRAMMARS.diff.schema;
-                 addToast("Constrained Sampling: Enforcing Strict JSON Diff", "info");
-             } else if (lastUserMsg.content.startsWith('/audit')) {
-                 schemaToUse = GRAMMARS.audit.schema;
-                 addToast("Constrained Sampling: Enforcing Structured Audit", "info");
-             }
-        }
-
         let fullText = '';
-        const stream = streamChatCompletion(historyToUse, config, schemaToUse);
+        const stream = streamChatCompletion(historyToUse, config);
 
         for await (const chunk of stream) {
           fullText += chunk;
@@ -244,7 +207,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         content: textToSend.trim(),
         timestamp: Date.now(),
     };
-    const approximateTokens = Math.ceil(JSON.stringify([...messages, tempUserMsgForCalc]).length / 4);
+    const potentialNewHistory = [...messages, tempUserMsgForCalc];
+    const approximateTokens = Math.ceil(JSON.stringify(potentialNewHistory).length / 4);
     const limit = config.contextWindowSize || 1000000;
 
     if (approximateTokens > limit) {
@@ -264,25 +228,30 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     onSessionUpdate({ messages: newMessages, suggestions: [] });
     
     setInput('');
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
     
     await triggerStream(newMessages);
   };
 
   const handleEditMessage = (messageId: string, newContent: string) => {
+      // 1. Find index of message
       const index = messages.findIndex(m => m.id === messageId);
       if (index === -1) return;
 
+      // 2. Branch history: keep everything BEFORE this message
       const historyPrefix = messages.slice(0, index);
+
+      // 3. Create new version of this message
       const updatedMessage: Message = {
           ...messages[index],
           content: newContent,
           timestamp: Date.now()
       };
 
+      // 4. Construct new history
       const newHistory = [...historyPrefix, updatedMessage];
       onSessionUpdate({ messages: newHistory });
 
+      // 5. Re-trigger streaming from this point
       addToast("Regenerating response...", "info");
       triggerStream(newHistory);
   };
@@ -301,6 +270,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     } else if (e.key === 'Escape') {
         setShowSlashMenu(false);
     } else if (e.key === 'ArrowUp' && input === '') {
+        // Edit last user message - simple re-population for now
         const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
         if (lastUserMsg) {
             e.preventDefault();
@@ -347,8 +317,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                           isStreaming={status === ChatStatus.STREAMING && index === messages.length - 1 && msg.role === 'model'}
                           isTerminalMode={isTerminalMode}
                           onEdit={handleEditMessage}
-                          onExecutionComplete={handleExecutionComplete}
-                          onNodeClick={handleNodeClick}
                         />
                     ))}
                     
@@ -434,7 +402,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             placeholder={isTerminalMode ? ">_ Input command (Try / for tools)" : "Ask DevOps Assistant (Type / for commands)..."}
                             rows={1}
                             className={`
-                                flex-1 max-h-64 bg-transparent border-none focus:ring-0 resize-none py-1.5 leading-relaxed scrollbar-hide text-xs
+                                flex-1 max-h-64 bg-transparent border-none focus:ring-0 resize-none py-1.5 leading-normal scrollbar-hide text-xs
                                 ${isTerminalMode 
                                     ? 'text-green-400 placeholder-green-800 font-mono' 
                                     : 'text-stc-purple placeholder-stc-purple/40 font-sans'}

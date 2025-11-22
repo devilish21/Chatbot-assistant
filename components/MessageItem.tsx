@@ -229,10 +229,10 @@ export const MessageItem = React.memo(({
       return (
         <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-4 group`}>
           <div className={`
-            max-w-4xl w-full relative p-3 border-l-2 font-mono
+            max-w-4xl relative p-3 border-l-2 font-mono ${isEditing ? 'w-full' : 'w-fit'}
             ${isUser 
                 ? 'border-green-500 bg-green-900/10' 
-                : 'border-green-700 bg-transparent'}
+                : 'border-green-700 bg-transparent w-full'}
           `}>
             <div className="flex gap-3">
                 <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center bg-black border ${isUser ? 'border-green-500 text-green-500' : 'border-green-700 text-green-700'}`}>
@@ -240,7 +240,7 @@ export const MessageItem = React.memo(({
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
                     )}
                 </div>
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden min-w-[120px]">
                     <div className="flex items-center justify-between mb-1.5">
                         <span className={`text-xs font-bold tracking-wide uppercase ${isUser ? 'text-green-500' : 'text-green-700'}`}>{isUser ? 'USR_SHELL' : 'SYS_CORE'}</span>
                         <div className="flex items-center gap-3">
@@ -337,10 +337,10 @@ export const MessageItem = React.memo(({
                 </div>
 
                 <div className={`
-                    px-5 py-3.5 shadow-xl text-sm leading-relaxed max-w-full w-full
+                    px-5 py-3.5 shadow-xl text-sm leading-relaxed max-w-full ${isEditing ? 'w-full' : 'w-fit'}
                     ${isUser 
                         ? 'bg-stc-purple text-white rounded-2xl rounded-tr-sm' 
-                        : 'bg-white border border-gray-100 text-gray-700 rounded-2xl rounded-tl-sm'}
+                        : 'bg-white border border-gray-100 text-gray-700 rounded-2xl rounded-tl-sm w-full'}
                     ${message.isError ? 'border-stc-coral bg-red-50' : ''}
                 `}>
                     {isEditing ? (
