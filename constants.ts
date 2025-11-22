@@ -3,9 +3,17 @@ import { AppConfig, SlashCommand } from './types';
 import { Schema, Type } from "@google/genai";
 
 export const DEFAULT_CONFIG: AppConfig = {
-  // Endpoint is not used for Gemini SDK but kept for type compatibility
-  endpoint: 'https://generativelanguage.googleapis.com', 
+  // Default Provider
+  provider: 'google',
+
+  // Google Config
+  apiKey: '',
   model: 'gemini-2.5-flash', 
+  
+  // Ollama Config
+  ollamaEndpoint: 'http://localhost:11434',
+  ollamaModel: 'llama3',
+
   temperature: 0.7,
   systemInstruction: `You are an advanced DevOps Omni-Assistant. 
   
@@ -21,28 +29,19 @@ export const DEFAULT_CONFIG: AppConfig = {
   Your expertise spans the entire software development lifecycle (SDLC): Planning, Coding (Git, Best Practices), Building (CI/CD), Testing, Releasing, Deploying (IaC, Containers, Cloud), Operating, and Monitoring (Observability, SRE).`,
   enableSuggestions: true,
   enableVisualEffects: true,
-  // Admin Defaults
-  apiKey: '',
   maxOutputTokens: 1024,
   contextWindowSize: 1000, // Default context window
   botName: 'DevOps Assistant',
   welcomeMessage: "DevOps Assistant Online.\nReady for Code, Pipeline, Security, and Infrastructure operations...",
-  systemAlert: "This is a beta version, please expect lag",
-  agentMode: true, // Default to enabled for the demo
+  systemAlert: null,
+  agentMode: true,
 };
 
 // --- GRAMMAR CONSTRAINTS (GBNF & SCHEMAS) ---
-// These define the strict structure models MUST follow.
-// GBNF is for Local LLMs (Llama.cpp/Ollama). Schemas are for Gemini/OpenAI.
-
 export const GRAMMARS = {
-    // 1. Strict Diff Grammar
     diff: {
-        // Future-proof: GBNF string for Llama.cpp
         gbnf: `root ::= "{" space "\\"original\\":" space string "," space "\\"modified\\":" space string "}" space
                string ::= "\\"" ( [^"\\\\] | "\\\\" (["\\\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]) )* "\\"" space`,
-        
-        // Current: Gemini Schema
         schema: {
             type: Type.OBJECT,
             properties: {
@@ -52,8 +51,6 @@ export const GRAMMARS = {
             required: ["original", "modified"]
         } as Schema
     },
-
-    // 2. Analysis Grammar (Structured Audit)
     audit: {
         schema: {
             type: Type.OBJECT,
@@ -117,24 +114,5 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     label: '/explain', 
     description: 'Explain this code/log in simple terms', 
     prompt: 'Explain the following code or log snippet in simple, technical terms. Highlight key logic and potential errors:' 
-  },
-  // Internal Tool Simulations
-  {
-    key: '/jira',
-    label: '/jira [ID]',
-    description: 'Fetch Jira ticket status (Simulated)',
-    prompt: '' // Handled specially in ChatInterface
-  },
-  {
-    key: '/bitbucket',
-    label: '/bitbucket [PR]',
-    description: 'Check PR status (Simulated)',
-    prompt: ''
-  },
-  {
-    key: '/sonar',
-    label: '/sonar [PROJ]',
-    description: 'Check Quality Gate (Simulated)',
-    prompt: ''
   }
 ];

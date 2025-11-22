@@ -1,20 +1,27 @@
 
 export interface AppConfig {
-  endpoint: string;
-  model: string; 
+  // Architecture Settings
+  provider: 'google' | 'ollama' | 'webllm';
+  
+  // Google Settings
+  apiKey?: string;
+  
+  // Ollama (Local) Settings
+  ollamaEndpoint: string;
+  ollamaModel: string;
+
+  // Shared Settings
+  model: string; // Used for Google model name
   temperature: number;
   systemInstruction: string;
   enableSuggestions: boolean;
   enableVisualEffects?: boolean;
-  // Admin Settings
-  apiKey?: string;
   maxOutputTokens?: number;
   contextWindowSize?: number;
   botName: string;
   welcomeMessage: string;
   systemAlert?: string | null;
-  // Agentic Features
-  agentMode?: boolean; // Enable Auto-fix loops
+  agentMode?: boolean;
 }
 
 export interface Message {
@@ -42,7 +49,7 @@ export enum ChatStatus {
   IDLE = 'idle',
   STREAMING = 'streaming',
   ERROR = 'error',
-  THINKING = 'thinking', // New status for UI feedback
+  THINKING = 'thinking', 
 }
 
 export interface SlashCommand {

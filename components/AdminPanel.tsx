@@ -18,12 +18,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   
-  // Settings State
   const [localConfig, setLocalConfig] = useState<AppConfig>(config);
   const [activeTab, setActiveTab] = useState<'general' | 'api' | 'system'>('general');
   const [alertDraft, setAlertDraft] = useState(config.systemAlert || '');
   
-  // Sync local state with global config when panel opens or config changes
   useEffect(() => {
     if (isOpen) {
         setLocalConfig(config);
@@ -35,7 +33,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // MOCK AUTHENTICATION
     if (username === 'admin' && password === 'admin123') {
         setIsAuthenticated(true);
         addToast('Admin Access Granted', 'success');
@@ -75,7 +72,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         className={`w-full max-w-2xl rounded-xl overflow-hidden relative flex flex-col ${containerClass} ${isAuthenticated ? 'h-[600px]' : 'h-auto'}`}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
         <div className={`flex items-center justify-between px-6 py-4 border-b ${isTerminalMode ? 'border-green-500/50 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
             <h2 className="text-lg font-bold tracking-wider uppercase flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
@@ -87,7 +83,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
 
         {!isAuthenticated ? (
-            /* LOGIN SCREEN */
             <form onSubmit={handleLogin} className="p-8 flex flex-col gap-6">
                 <div className="text-center space-y-2 mb-4">
                     <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center border-2 mb-4 ${isTerminalMode ? 'border-red-500 text-red-500' : 'border-stc-purple text-stc-purple'}`}>
@@ -133,9 +128,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </button>
             </form>
         ) : (
-            /* DASHBOARD SCREEN */
             <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar Tabs */}
                 <div className={`w-48 border-r flex flex-col ${isTerminalMode ? 'border-green-500/30 bg-green-900/5' : 'border-stc-purple/10 bg-stc-light'}`}>
                     {[
                         { id: 'general', label: 'General Settings', icon: <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
@@ -157,32 +150,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     ))}
                 </div>
 
-                {/* Content Area */}
                 <div className="flex-1 p-8 overflow-y-auto">
                     {activeTab === 'general' && (
                         <div className="space-y-6 animate-in slide-in-from-right-4 duration-200">
-                            <div className="flex justify-between items-center border-b pb-2 mb-4">
-                                <h3 className="text-sm font-bold uppercase opacity-70">Interface Settings</h3>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-[10px] font-bold uppercase opacity-80">Enable Visual Effects</span>
-                                    <button 
-                                        onClick={() => setLocalConfig({...localConfig, enableVisualEffects: !localConfig.enableVisualEffects})}
-                                        className={`
-                                            relative w-8 h-4 rounded-full transition-colors duration-300 focus:outline-none
-                                            ${localConfig.enableVisualEffects !== false 
-                                                ? (isTerminalMode ? 'bg-green-500' : 'bg-stc-coral') 
-                                                : (isTerminalMode ? 'bg-green-900/30' : 'bg-gray-300')}
-                                        `}
-                                    >
-                                        <span className={`
-                                            absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-300
-                                            ${localConfig.enableVisualEffects !== false ? 'translate-x-4' : 'translate-x-0'}
-                                        `}></span>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div>
+                            <h3 className="text-sm font-bold uppercase border-b pb-2 opacity-70">Interface Settings</h3>
+                             <div>
                                 <label className="block text-xs font-bold uppercase mb-2">Bot Name</label>
                                 <input 
                                     type="text" 
@@ -191,136 +163,107 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                     className={`w-full p-2 rounded text-sm ${inputClass}`}
                                 />
                             </div>
-
-                            <div>
-                                <label className="block text-xs font-bold uppercase mb-2">Welcome Message</label>
-                                <textarea 
-                                    value={localConfig.welcomeMessage}
-                                    onChange={e => setLocalConfig({...localConfig, welcomeMessage: e.target.value})}
-                                    rows={4}
-                                    className={`w-full p-2 rounded text-sm resize-none ${inputClass}`}
-                                />
+                             <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold uppercase opacity-80">Enable Visual Effects</span>
+                                <button 
+                                    onClick={() => setLocalConfig({...localConfig, enableVisualEffects: !localConfig.enableVisualEffects})}
+                                    className={`relative w-8 h-4 rounded-full transition-colors duration-300 ${localConfig.enableVisualEffects ? (isTerminalMode ? 'bg-green-500' : 'bg-stc-coral') : 'bg-gray-500'}`}
+                                >
+                                    <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-300 ${localConfig.enableVisualEffects ? 'translate-x-4' : ''}`}></span>
+                                </button>
                             </div>
                         </div>
                     )}
 
                     {activeTab === 'api' && (
                         <div className="space-y-6 animate-in slide-in-from-right-4 duration-200">
-                             <h3 className="text-sm font-bold uppercase border-b pb-2 opacity-70">Model Configuration</h3>
+                             <h3 className="text-sm font-bold uppercase border-b pb-2 opacity-70">Provider Strategy</h3>
                              
                              <div>
-                                <label className="block text-xs font-bold uppercase mb-2">Gemini API Key</label>
-                                <p className="text-[10px] opacity-70 mb-2">Override the default API key. Required for high-rate limits or custom billing projects.</p>
-                                <input 
-                                    type="password" 
-                                    value={localConfig.apiKey || ''}
-                                    onChange={e => setLocalConfig({...localConfig, apiKey: e.target.value})}
-                                    placeholder="Enter AI Studio Key..."
-                                    className={`w-full p-2 rounded text-sm ${inputClass}`}
-                                />
+                                <label className="block text-xs font-bold uppercase mb-2">Active Provider</label>
+                                <select
+                                    value={localConfig.provider}
+                                    onChange={e => setLocalConfig({...localConfig, provider: e.target.value as any})}
+                                    className={`w-full p-2 rounded text-xs ${inputClass}`}
+                                >
+                                    <option value="google">Google Gemini (Cloud)</option>
+                                    <option value="ollama">Ollama (Localhost)</option>
+                                    <option value="webllm">WebLLM (In-Browser Wasm)</option>
+                                </select>
                              </div>
 
-                             <div>
-                                <label className="block text-xs font-bold uppercase mb-2">Context Window Size</label>
-                                <p className="text-[10px] opacity-70 mb-2">Total token capacity for history and inputs. Visualized in footer.</p>
-                                <div className="flex items-center gap-4">
-                                    <select
-                                        value={localConfig.contextWindowSize || 1000000}
-                                        onChange={e => setLocalConfig({...localConfig, contextWindowSize: Number(e.target.value)})}
-                                        className={`flex-1 p-2 rounded text-xs ${inputClass}`}
-                                    >
-                                        <option value={8192}>8K (Local/Edge)</option>
-                                        <option value={32768}>32K (Standard)</option>
-                                        <option value={128000}>128K (High)</option>
-                                        <option value={1000000}>1M (Gemini Flash)</option>
-                                        <option value={2000000}>2M (Gemini Pro)</option>
-                                        {/* Add option if config has a custom value not in the list */}
-                                        {![8192, 32768, 128000, 1000000, 2000000].includes(localConfig.contextWindowSize || 0) && (
-                                            <option value={localConfig.contextWindowSize}>{localConfig.contextWindowSize} (Custom)</option>
-                                        )}
-                                    </select>
-                                </div>
+                             {localConfig.provider === 'google' && (
+                                 <div>
+                                    <label className="block text-xs font-bold uppercase mb-2">API Key (Optional)</label>
+                                    <input 
+                                        type="password" 
+                                        value={localConfig.apiKey || ''}
+                                        onChange={e => setLocalConfig({...localConfig, apiKey: e.target.value})}
+                                        placeholder="Using default environment key..."
+                                        className={`w-full p-2 rounded text-sm ${inputClass}`}
+                                    />
+                                 </div>
+                             )}
+
+                             {localConfig.provider === 'ollama' && (
+                                 <>
+                                     <div>
+                                        <label className="block text-xs font-bold uppercase mb-2">Ollama Endpoint</label>
+                                        <input 
+                                            type="text" 
+                                            value={localConfig.ollamaEndpoint}
+                                            onChange={e => setLocalConfig({...localConfig, ollamaEndpoint: e.target.value})}
+                                            className={`w-full p-2 rounded text-sm ${inputClass}`}
+                                        />
+                                     </div>
+                                     <div>
+                                        <label className="block text-xs font-bold uppercase mb-2">Local Model Name</label>
+                                        <input 
+                                            type="text" 
+                                            value={localConfig.ollamaModel}
+                                            onChange={e => setLocalConfig({...localConfig, ollamaModel: e.target.value})}
+                                            placeholder="llama3, mistral, codellama..."
+                                            className={`w-full p-2 rounded text-sm ${inputClass}`}
+                                        />
+                                     </div>
+                                     <p className="text-[10px] opacity-70 p-2 border rounded border-dashed">
+                                         Note: Ensure Ollama is running with <code>OLLAMA_ORIGINS="*"</code>
+                                     </p>
+                                 </>
+                             )}
+
+                             <div className="pt-4 border-t border-opacity-20">
+                                <label className="block text-xs font-bold uppercase mb-2">Context Window</label>
+                                <select
+                                    value={localConfig.contextWindowSize}
+                                    onChange={e => setLocalConfig({...localConfig, contextWindowSize: Number(e.target.value)})}
+                                    className={`w-full p-2 rounded text-xs ${inputClass}`}
+                                >
+                                    <option value={8192}>8K (Standard)</option>
+                                    <option value={32768}>32K (High)</option>
+                                    <option value={1000000}>1M (Gemini Only)</option>
+                                </select>
                              </div>
-
-                             <div>
-                                <label className="block text-xs font-bold uppercase mb-2">Max Output Tokens</label>
-                                <p className="text-[10px] opacity-70 mb-2">Controls the maximum length of the model's response. Higher values allow detailed code generation.</p>
-                                <div className="flex items-center gap-4">
-                                    <input 
-                                        type="range" 
-                                        min="1024" 
-                                        max="32768" 
-                                        step="1024"
-                                        value={localConfig.maxOutputTokens || 8192}
-                                        onChange={e => setLocalConfig({...localConfig, maxOutputTokens: Number(e.target.value)})}
-                                        className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                    <span className={`font-mono font-bold ${isTerminalMode ? 'text-green-400' : 'text-stc-coral'}`}>
-                                        {localConfig.maxOutputTokens || 8192}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold uppercase mb-2">Temperature (Creativity)</label>
-                                <div className="flex items-center gap-4">
-                                    <input 
-                                        type="range" 
-                                        min="0" 
-                                        max="1" 
-                                        step="0.1"
-                                        value={localConfig.temperature}
-                                        onChange={e => setLocalConfig({...localConfig, temperature: Number(e.target.value)})}
-                                        className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                    <span className={`font-mono font-bold ${isTerminalMode ? 'text-green-400' : 'text-stc-coral'}`}>
-                                        {localConfig.temperature}
-                                    </span>
-                                </div>
-                            </div>
                         </div>
                     )}
 
                     {activeTab === 'system' && (
                         <div className="space-y-6 animate-in slide-in-from-right-4 duration-200">
                              <h3 className="text-sm font-bold uppercase border-b pb-2 opacity-70">System Broadcast</h3>
-                             
-                             <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-900 bg-green-900/10' : 'bg-yellow-50 border-yellow-200'}`}>
-                                 <div className="flex items-center gap-2 mb-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isTerminalMode ? "text-red-500" : "text-yellow-600"}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                    <span className="font-bold text-xs uppercase">Active Alert Banner</span>
-                                 </div>
-                                 <textarea 
-                                    value={alertDraft}
-                                    onChange={e => setAlertDraft(e.target.value)}
-                                    placeholder="Enter downtime notice or system alert message..."
-                                    rows={3}
-                                    className={`w-full p-2 rounded text-sm resize-none ${inputClass}`}
-                                 />
-                                 <div className="flex justify-end gap-2 mt-2">
-                                     <button 
-                                        onClick={handleClearAlert}
-                                        className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-colors ${isTerminalMode ? 'bg-red-900/30 text-red-500 hover:bg-red-900/50' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                                     >
-                                        Clear
-                                     </button>
-                                     <button 
-                                        onClick={handlePublishAlert}
-                                        className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded transition-colors ${isTerminalMode ? 'bg-green-500 text-black hover:bg-green-400' : 'bg-stc-purple text-white hover:bg-stc-coral'}`}
-                                     >
-                                        Stage Alert
-                                     </button>
-                                 </div>
+                             <textarea 
+                                value={alertDraft}
+                                onChange={e => setAlertDraft(e.target.value)}
+                                rows={3}
+                                className={`w-full p-2 rounded text-sm resize-none ${inputClass}`}
+                             />
+                             <div className="flex justify-end gap-2">
+                                 <button onClick={handleClearAlert} className="px-3 py-1.5 text-[10px] font-bold border rounded opacity-50 hover:opacity-100">Clear</button>
+                                 <button onClick={handlePublishAlert} className={`px-3 py-1.5 text-[10px] font-bold rounded ${isTerminalMode ? 'bg-green-500 text-black' : 'bg-stc-purple text-white'}`}>Stage</button>
                              </div>
-                             
-                             <p className="text-[10px] opacity-60">
-                                 Note: "Stage Alert" updates the local configuration. Click "Save Changes" below to publish immediately to the main interface.
-                             </p>
                         </div>
                     )}
 
-                    {/* Footer Action */}
-                    <div className="mt-10 pt-6 border-t border-opacity-20 flex justify-end">
+                    <div className="mt-8 pt-4 border-t border-opacity-20 flex justify-end">
                         <button 
                             onClick={handleSave}
                             className={`px-6 py-2 text-xs font-bold uppercase rounded transition-colors ${
