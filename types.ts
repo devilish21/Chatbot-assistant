@@ -13,6 +13,8 @@ export interface AppConfig {
   botName: string;
   welcomeMessage: string;
   systemAlert?: string | null;
+  // Agentic Features
+  agentMode?: boolean; // Enable Auto-fix loops
 }
 
 export interface Message {
@@ -24,6 +26,8 @@ export interface Message {
   // Context Branching
   versions?: { content: string, timestamp: number }[];
   currentVersionIndex?: number;
+  // Thought Process (Chain of Thought)
+  thoughts?: string; 
 }
 
 export interface ChatSession {
@@ -38,6 +42,7 @@ export enum ChatStatus {
   IDLE = 'idle',
   STREAMING = 'streaming',
   ERROR = 'error',
+  THINKING = 'thinking', // New status for UI feedback
 }
 
 export interface SlashCommand {

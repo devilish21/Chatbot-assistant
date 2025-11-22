@@ -52,7 +52,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
         <div className={`flex items-center justify-between px-6 py-4 border-b ${isTerminalMode ? 'border-green-500/50 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
             <div className="flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-                <h2 className="text-lg font-bold tracking-wider">DEVOPS CHATBOT MANUAL v3.0</h2>
+                <h2 className="text-lg font-bold tracking-wider">DEVOPS CHATBOT MANUAL v3.1</h2>
             </div>
             <button onClick={onClose} className="hover:opacity-70 transition-opacity">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -89,23 +89,23 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                         <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
                             <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                                Code Execution
+                                Agentic Execution
                             </h3>
-                            <p className="text-xs opacity-70">Run Python scripts locally using WebAssembly (Pyodide) for math, logic, and data processing.</p>
+                            <p className="text-xs opacity-70">Runs Python locally via Wasm. Automatically detects execution errors and self-corrects the code in real-time.</p>
                         </div>
                         <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
                             <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
-                                Visual Diagrams
+                                Interactive Visuals
                             </h3>
-                            <p className="text-xs opacity-70">Auto-render Mermaid.js diagrams for network topology, sequence flows, and Gantt charts.</p>
+                            <p className="text-xs opacity-70">Render clickable Mermaid.js diagrams. Interact with nodes to dive deeper into architecture details.</p>
                         </div>
                         <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
                             <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                                Log Analysis
+                                Log Intelligence
                             </h3>
-                            <p className="text-xs opacity-70">Drag & drop .log, .json, or .yaml files directly into the chat for instant root cause analysis.</p>
+                            <p className="text-xs opacity-70">Drag & drop log files. The system parses context and uses Chain-of-Thought reasoning to find root causes.</p>
                         </div>
                     </div>
                 </div>
@@ -116,45 +116,45 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4 duration-300">
                     
                     <FeatureCard 
-                        title="Python Runtime Sandbox" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>}
-                        description="Execute Python code securely in your browser using WebAssembly. Perfect for data processing, complex math, or testing logic."
-                        usage="Ask the bot to write a Python script (e.g., 'Write a script to parse JSON'). Click 'Run' on the code block."
+                        title="Agentic Auto-Fix Loop" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>}
+                        description="Self-healing execution environment. If a Python script fails, the agent automatically analyzes the error, rewrites the code, and re-runs it without user intervention."
+                        usage="Ask for a calculation or data processing task. If the initial code fails, watch the bot auto-correct."
                     />
 
                     <FeatureCard 
-                        title="Architecture Visualization" 
+                        title="Visual Diff Engine" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12h6"/><path d="M12 3v18"/><path d="M3 6h18"/><path d="M3 18h18"/></svg>}
+                        description="Side-by-side code comparison. Visualizes infrastructure changes (Red/Green diffs) to validate refactors before applying them."
+                        usage="Use the '/diff' command or ask the bot to 'Refactor this code'. The output will show a split view."
+                    />
+
+                    <FeatureCard 
+                        title="Cognitive Reasoning (CoT)" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 2a10 10 0 0 1 10 10h-10z"/><path d="m12 12 4.09-4.09L12 2"/></svg>}
+                        description="Transparent reasoning process. Expand the 'Thinking Process' accordion to see how the AI deconstructed complex DevOps problems."
+                        usage="Ask a complex logical question. Click 'Thinking Process' to reveal the internal step-by-step logic."
+                    />
+
+                    <FeatureCard 
+                        title="Interactive Architecture" 
                         icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                        description="Automatically renders Mermaid.js diagrams. Visualize CI/CD pipelines, network flows, and class structures instantly."
-                        usage="Ask for a diagram (e.g., 'Draw a sequence diagram for OAuth login'). The bot will render the chart in the chat."
+                        description="Automatically renders Mermaid.js diagrams. Click on diagram nodes to automatically inject that component name into the chat for follow-up."
+                        usage="Ask for a diagram (e.g., 'Draw a flow for OAuth'). Click a node like 'AuthService' to ask about it."
                     />
 
                     <FeatureCard 
-                        title="Admin Console" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
-                        description="Manage API Keys, configure LLM parameters (Max Tokens, Context Window), and broadcast system alerts."
-                        usage="Type '/admin' or use Command Palette. Login to secure your API Key or adjust model temperature."
+                        title="Python Sandbox" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>}
+                        description="Execute Python code securely in your browser using WebAssembly (Pyodide). Perfect for math, JSON parsing, or testing logic."
+                        usage="Ask the bot to write a Python script. Click 'Run' on the code block."
                     />
 
                     <FeatureCard 
                         title="Prompt Library" 
                         icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg>}
                         description="Save frequently used templates or complex queries. Inject them into the chat with a single click."
-                        usage="Click the Book icon inside the input bar. Use '+ New Snippet' to save current text, or click a saved item to load it."
-                    />
-
-                    <FeatureCard 
-                        title="Context Branching" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}
-                        description="Edit any previous user message to create a new conversation branch, exploring different scenarios from that point."
-                        usage="Hover over your previous message bubble. Click the 'Edit' (pencil) icon, modify the text, and click 'Save & Regenerate'."
-                    />
-
-                    <FeatureCard 
-                        title="DevOps Utilities" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>}
-                        description="A suite of client-side tools for validating K8s manifests (YAML), formatting JSON payloads, and handling Base64 secrets."
-                        usage="Click the 'Tools' button in the header, or press Ctrl+K and select 'YAML/JSON Validator'."
+                        usage="Click the Book icon inside the input bar. Use '+ New Snippet' to save current text."
                     />
                 </div>
             )}
@@ -192,13 +192,13 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
 
                     <div className="grid gap-4">
                         {[
+                            { cmd: '/diff', desc: 'Visual Diff', detail: 'Compare original vs modified code side-by-side.' },
                             { cmd: '/admin', desc: 'System Administration', detail: 'Login to configure token limits, context size, and API Keys.' },
                             { cmd: '/audit', desc: 'Security Audit', detail: 'Paste code snippets to get a breakdown of vulnerabilities.' },
                             { cmd: '/docker', desc: 'Generate Dockerfile', detail: 'Creates production-ready, multi-stage Dockerfiles.' },
                             { cmd: '/k8s', desc: 'Kubernetes Manifests', detail: 'Generates Deployment, Service, and Ingress YAMLs.' },
                             { cmd: '/ci', desc: 'Pipeline Generation', detail: 'Scaffolds GitHub Actions or Jenkinsfiles.' },
                             { cmd: '/regex', desc: 'Regex Helper', detail: 'Explains or generates complex regular expressions.' },
-                            { cmd: '/explain', desc: 'Code Explanation', detail: 'Breaks down complex logs or code into simple terms.' },
                         ].map((item, i) => (
                             <div key={i} className={`flex items-center p-3 rounded border ${isTerminalMode ? 'border-green-500/30 hover:bg-green-900/20' : 'border-stc-purple/10 hover:bg-stc-light'}`}>
                                 <div className={`w-24 font-mono font-bold ${isTerminalMode ? 'text-green-400' : 'text-stc-coral'}`}>{item.cmd}</div>

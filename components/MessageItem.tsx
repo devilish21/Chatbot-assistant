@@ -8,9 +8,11 @@ interface MessageItemProps {
   isStreaming?: boolean;
   isTerminalMode: boolean;
   onEdit?: (messageId: string, newContent: string) => void;
+  onExecutionResult?: (result: { success: boolean; output: string }) => void;
+  onNodeClick?: (text: string) => void;
 }
 
-export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, onEdit }: MessageItemProps) => {
+export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, onEdit, onExecutionResult, onNodeClick }: MessageItemProps) => {
   const isUser = message.role === 'user';
   const [isCopied, setIsCopied] = useState(false);
   
@@ -77,6 +79,9 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
           key={`code-${match.index}`} 
           language={match[1] || ''} 
           code={match[2]} 
+          autoRun={!!onExecutionResult}
+          onExecutionComplete={onExecutionResult}
+          onNodeClick={onNodeClick}
         />
       );
       lastIndex = match.index + match[0].length;
@@ -260,8 +265,7 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
                 </div>
 
                 <div className={`
-                    px-5 py-3.5 shadow-xl text-sm leading-relaxed max-w-full
-                    ${isEditing ? 'w-full' : 'w-fit break-words'}
+                    px-5 py-3.5 shadow-xl text-sm leading-relaxed max-w-full w-full
                     ${isUser 
                         ? 'bg-stc-purple text-white rounded-2xl rounded-tr-sm' 
                         : 'bg-white border border-gray-100 text-gray-700 rounded-2xl rounded-tl-sm'}
@@ -298,11 +302,4 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
         </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-    return (
-        prevProps.message.content === nextProps.message.content &&
-        prevProps.isStreaming === nextProps.isStreaming &&
-        prevProps.message.isError === nextProps.message.isError &&
-        prevProps.isTerminalMode === nextProps.isTerminalMode
-    );
 });

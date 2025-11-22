@@ -247,7 +247,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       // 4. Construct new history
       const newHistory = [...historyPrefix, updatedMessage];
-      onSessionUpdate({ messages: newHistory, suggestions: [] });
+      onSessionUpdate({ messages: newHistory });
 
       // 5. Re-trigger streaming from this point
       addToast("Regenerating response...", "info");
@@ -319,20 +319,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     ))}
                     
                     {isInitialState && (
-                        <div className="flex-1 flex flex-col justify-end items-center mb-2 animate-in fade-in duration-500">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-3xl">
+                        <div className="mt-12 mb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-3xl mx-auto">
                                 {DEFAULT_QUESTIONS.map((q, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => handleQuestionClick(q.query)}
                                         className={`
-                                            flex flex-col p-6 rounded-xl border transition-all group text-left
+                                            flex flex-col p-5 rounded-xl border transition-all group text-left
                                             ${isTerminalMode 
-                                                ? 'border-green-500/30 bg-black hover:bg-green-900/20 hover:border-green-500 hover:shadow-[0_0_20px_rgba(34,197,94,0.2)]' 
-                                                : 'border-stc-purple/10 bg-white hover:bg-stc-light hover:border-stc-purple/30 shadow-sm hover:shadow-md'}
+                                                ? 'border-green-500/30 bg-green-900/10 hover:bg-green-900/30 hover:border-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.15)]' 
+                                                : 'border-stc-purple/10 bg-white/50 hover:bg-white hover:border-stc-purple/30 shadow-sm hover:shadow-md'}
                                         `}
                                     >
-                                        <span className={`text-xs font-bold uppercase mb-2 ${isTerminalMode ? 'text-green-500' : 'text-stc-coral'}`}>
+                                        <span className={`text-[10px] font-bold uppercase mb-2 tracking-wider ${isTerminalMode ? 'text-green-500' : 'text-stc-coral'}`}>
                                             {q.title}
                                         </span>
                                         <span className={`text-sm font-medium ${isTerminalMode ? 'text-green-400' : 'text-stc-purple'}`}>
@@ -344,16 +344,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         </div>
                     )}
 
-                    <div className="h-72 flex-shrink-0" />
+                    <div className="h-32 flex-shrink-0" />
                     <div ref={messagesEndRef} />
                 </div>
             </div>
 
-            <div className={`absolute bottom-0 left-0 right-0 pt-4 pb-4 px-4 md:px-6 z-30 ${isTerminalMode ? 'bg-gradient-to-t from-black via-black to-transparent' : 'bg-gradient-to-t from-stc-light via-stc-light to-transparent'}`}>
+            <div className={`absolute bottom-0 left-0 right-0 pb-6 pt-6 px-4 md:px-6 z-30 ${isTerminalMode ? 'bg-gradient-to-t from-black via-black to-transparent' : 'bg-gradient-to-t from-stc-light via-stc-light to-transparent'}`}>
                 <div className={`mx-auto relative space-y-2 ${isZenMode ? 'max-w-4xl' : 'max-w-6xl'}`}>
                     
                     {showSlashMenu && filteredCommands.length > 0 && (
-                        <div className={`absolute bottom-full mb-2 w-full max-w-md rounded-lg border shadow-2xl overflow-hidden ${
+                        <div className={`absolute bottom-full mb-2 w-full max-w-md rounded-lg border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2 ${
                             isTerminalMode ? 'bg-black border-green-500' : 'bg-white border-stc-purple/20'
                         }`}>
                             <div className={`text-[10px] font-bold px-3 py-2 uppercase tracking-wider border-b ${
@@ -386,10 +386,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     `}>
                         <button 
                             onClick={onOpenPromptLibrary}
-                            className={`flex-shrink-0 h-7 w-7 flex items-center justify-center rounded hover:bg-opacity-10 transition-colors ${isTerminalMode ? 'text-green-500 hover:bg-green-500' : 'text-stc-purple hover:bg-stc-purple'}`}
+                            className={`flex-shrink-0 h-8 w-8 flex items-center justify-center rounded hover:bg-opacity-10 transition-colors ${isTerminalMode ? 'text-green-500 hover:bg-green-500' : 'text-stc-purple hover:bg-stc-purple'}`}
                             title="Prompt Library"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                         </button>
 
                         <textarea
@@ -400,7 +400,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             placeholder={isTerminalMode ? ">_ Input command (Try / for tools)" : "Ask DevOps Assistant (Type / for commands)..."}
                             rows={1}
                             className={`
-                                flex-1 max-h-64 bg-transparent border-none focus:ring-0 resize-none py-1.5 leading-relaxed scrollbar-hide text-xs
+                                flex-1 max-h-64 min-h-[2.5rem] bg-transparent border-none focus:ring-0 resize-none py-2.5 leading-relaxed scrollbar-hide text-sm
                                 ${isTerminalMode 
                                     ? 'text-green-400 placeholder-green-800 font-mono' 
                                     : 'text-stc-purple placeholder-stc-purple/40 font-sans'}
@@ -412,7 +412,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             onClick={() => handleSendMessage()}
                             disabled={!input.trim() || status === ChatStatus.STREAMING}
                             className={`
-                                h-8 w-8 flex items-center justify-center transition-all duration-200
+                                h-8 w-8 flex-shrink-0 flex items-center justify-center transition-all duration-200 mb-0.5
                                 ${isTerminalMode 
                                     ? (status === ChatStatus.STREAMING ? 'bg-green-900 text-green-700 cursor-not-allowed' : !input.trim() ? 'bg-green-900/30 text-green-800' : 'bg-green-500 text-black hover:bg-green-400 rounded-sm')
                                     : (status === ChatStatus.STREAMING ? 'bg-stc-purple/50 text-white' : !input.trim() ? 'bg-gray-200 text-gray-400' : 'bg-stc-purple text-white hover:bg-stc-coral shadow-lg rounded-lg')
@@ -422,7 +422,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             {status === ChatStatus.STREAMING ? (
                                 <div className="w-2 h-2 bg-current rounded-sm animate-pulse" />
                             ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                             )}
                         </button>
                     </div>

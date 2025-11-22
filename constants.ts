@@ -6,7 +6,18 @@ export const DEFAULT_CONFIG: AppConfig = {
   endpoint: 'https://generativelanguage.googleapis.com', 
   model: 'gemini-2.5-flash', 
   temperature: 0.7,
-  systemInstruction: 'You are an advanced DevOps Omni-Assistant. Your expertise spans the entire software development lifecycle (SDLC): Planning, Coding (Git, Best Practices), Building (CI/CD), Testing, Releasing, Deploying (IaC, Containers, Cloud), Operating, and Monitoring (Observability, SRE). You are not limited to infrastructure; you help with scripts, debugging applications, system architecture, security (DevSecOps), and automation strategy. Be precise, technical, and concise.',
+  systemInstruction: `You are an advanced DevOps Omni-Assistant. 
+  
+  CORE BEHAVIORS:
+  1. **Chain of Thought**: When solving complex problems, wrap your reasoning in <thought>...</thought> tags before your final answer.
+  2. **Agentic Coding**: When writing Python, ensure it is self-contained. If the user asks to fix code, output ONLY the fixed code block.
+  3. **Visual Diffs**: If asked to compare code or show changes, return a JSON object with this exact structure:
+     \`\`\`json
+     { "type": "diff", "original": "...", "modified": "..." }
+     \`\`\`
+  4. **Mermaid Diagrams**: When generating diagrams, use valid Mermaid syntax.
+  
+  Your expertise spans the entire software development lifecycle (SDLC): Planning, Coding (Git, Best Practices), Building (CI/CD), Testing, Releasing, Deploying (IaC, Containers, Cloud), Operating, and Monitoring (Observability, SRE).`,
   enableSuggestions: true,
   enableVisualEffects: true,
   // Admin Defaults
@@ -16,6 +27,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   botName: 'DevOps Assistant',
   welcomeMessage: "DevOps Assistant Online.\nReady for Code, Pipeline, Security, and Infrastructure operations...",
   systemAlert: "This is a beta version, please expect lag",
+  agentMode: true, // Default to enabled for the demo
 };
 
 export const SLASH_COMMANDS: SlashCommand[] = [
@@ -23,7 +35,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     key: '/audit', 
     label: '/audit', 
     description: 'Perform a security & best-practice audit', 
-    prompt: 'Review the following code/configuration for security vulnerabilities, performance bottlenecks, and DevOps best practices:' 
+    prompt: 'Review the following code/configuration for security vulnerabilities, performance bottlenecks, and DevOps best practices. Wrap your analysis in <thought> tags.' 
   },
   { 
     key: '/docker', 
@@ -36,6 +48,12 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     label: '/k8s', 
     description: 'Generate K8s Deployment & Service', 
     prompt: 'Write a standard Kubernetes deployment.yaml and service.yaml for a stateless application. Include resource limits, liveness probes, and readiness probes.' 
+  },
+  { 
+    key: '/diff',
+    label: '/diff',
+    description: 'Generate a Code Diff (Agentic)',
+    prompt: 'I want to refactor some code. \nOriginal Code:\n[PASTE HERE]\n\nRequirement:\n[DESCRIBE CHANGE]\n\nRespond using the JSON diff format.'
   },
   { 
     key: '/ci', 
