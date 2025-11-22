@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Content, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, Content, GenerateContentResponse, Schema } from "@google/genai";
 import { AppConfig, Message } from "../types";
 
 export const validateEndpoint = (url: string): boolean => {
@@ -23,7 +23,12 @@ const getAIClient = (config: AppConfig) => {
     return new GoogleGenAI({ apiKey });
 };
 
-export async function* streamChatCompletion(messages: Message[], config: AppConfig) {
+// Added 'schema' parameter to support Grammar-Constrained Sampling
+export async function* streamChatCompletion(
+    messages: Message[], 
+    config: AppConfig, 
+    schema?: Schema
+) {
   const ai = getAIClient(config);
 
   const lastMessage = messages[messages.length - 1];
@@ -34,28 +39,35 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
   }
 
   try {
-    // Logic to prevent empty response when maxTokens is small (e.g. 1024)
     const maxTokens = config.maxOutputTokens;
     
-    // If tokens are restricted below 2048, we disable thinking completely.
-    // 'Thinking' consumes tokens before output; on small budgets, this starves the output.
-    const shouldDisableThinking = maxTokens && maxTokens < 2048;
+    // Logic: If schema is provided, we MUST be in strict JSON mode.
+    // Thinking is generally incompatible with strict JSON schema enforcement in some versions,
+    // but allowed in Gemini 2.5 if configured correctly. For safety, we disable thinking if schema is present
+    // to ensure the output is PURE JSON.
+    const isConstrainedMode = !!schema;
+    const shouldDisableThinking = (maxTokens && maxTokens < 2048) || isConstrainedMode;
 
     let systemInstruction = config.systemInstruction;
     
-    // Inject strict instructions if a token limit is active to prevent abrupt cutoffs
     if (maxTokens) {
-        systemInstruction += `\n\n[SYSTEM NOTICE]: You have a STRICT output limit of ${maxTokens} tokens. You MUST prioritize your answer and Code blocks. Be extremely concise. Do not waste tokens on pleasantries. If you are generating code, ensure it is complete or break it down if it's too large.`;
+        systemInstruction += `\n\n[SYSTEM NOTICE]: You have a STRICT output limit of ${maxTokens} tokens.`;
+    }
+    
+    if (isConstrainedMode) {
+        systemInstruction += `\n\n[CONSTRAINT]: You are operating in STRICT JSON mode. You must output valid JSON matching the provided schema. Do not include markdown backticks or explanations outside the JSON.`;
     }
 
     const chat = ai.chats.create({
       model: config.model,
       history: history,
       config: {
-        temperature: config.temperature,
+        temperature: isConstrainedMode ? 0.1 : config.temperature, // Lower temp for strict tasks
         systemInstruction: systemInstruction,
         maxOutputTokens: maxTokens,
-        thinkingConfig: shouldDisableThinking ? { thinkingBudget: 0 } : undefined
+        thinkingConfig: shouldDisableThinking ? { thinkingBudget: 0 } : undefined,
+        responseMimeType: isConstrainedMode ? 'application/json' : 'text/plain',
+        responseSchema: schema
       }
     });
 

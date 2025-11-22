@@ -1,10 +1,10 @@
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { streamChatCompletion, generateFollowUpQuestions } from '../services/geminiService';
 import { AppConfig, Message, ChatStatus, ChatSession, SlashCommand } from '../types';
 import { MessageItem } from './MessageItem';
 import { SuggestionRail } from './SuggestionRail';
-import { SLASH_COMMANDS } from '../constants';
+import { SLASH_COMMANDS, GRAMMARS } from '../constants';
 
 interface ChatInterfaceProps {
   config: AppConfig;
@@ -47,17 +47,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // REFS FOR STABLE HANDLERS
-  // We use refs to hold the latest state so we can create stable callbacks
-  // that don't trigger re-renders of children (MessageItems)
-  const messagesRef = useRef(messages);
-  const configRef = useRef(config);
-
-  useEffect(() => {
-      messagesRef.current = messages;
-      configRef.current = config;
-  }, [messages, config]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -138,6 +127,34 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
   };
 
+  // --- AGENTIC LOOP LOGIC ---
+  // This callback is triggered by CodeBlock execution
+  const handleExecutionComplete = async (result: { success: boolean; output: string }) => {
+      if (!config.agentMode) return;
+      
+      // Avoid triggering loop if already busy, though in a real agent system we might queue
+      if (status === ChatStatus.STREAMING) return;
+
+      if (!result.success) {
+          const fixPrompt = `The code execution failed with the following error:\n\`\`\`\n${result.output}\n\`\`\`\nPlease analyze the error and rewrite the code to fix it. Return ONLY the fixed code.`;
+          
+          addToast("Agentic Loop: Auto-fixing error...", "info");
+          
+          // Trigger send message automatically
+          await handleSendMessage(fixPrompt);
+      }
+  };
+
+  // --- CONTEXT INJECTION ---
+  const handleNodeClick = (text: string) => {
+      setInput(prev => {
+          const prefix = prev.trim() ? prev.trim() + ' ' : '';
+          return prefix + text; 
+      });
+      textareaRef.current?.focus();
+      addToast(`Added "${text}" to input`, 'info');
+  };
+
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     if (status === ChatStatus.IDLE && lastMsg?.role === 'model' && !lastMsg.isError && lastMsg.content) {
@@ -155,10 +172,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             .catch(e => console.error("Suggestion Error:", e))
             .finally(() => setLoadingSuggestions(false));
     }
-  }, [status, messages, config, onSessionUpdate]);
+  }, [status, messages, config]);
 
-  // STABLE HANDLERS via Refs
-  const triggerStream = useCallback(async (historyToUse: Message[]) => {
+  const triggerStream = async (historyToUse: Message[]) => {
       setStatus(ChatStatus.STREAMING);
       const responseId = (Date.now() + 1).toString();
       const modelPlaceholder: Message = {
@@ -172,9 +188,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       onSessionUpdate({ messages: currentMessagesWithModel });
 
       try {
+        // --- GRAMMAR/SCHEMA DETECTION ---
+        const lastUserMsg = historyToUse[historyToUse.length - 1];
+        let schemaToUse = undefined;
+        
+        if (lastUserMsg && lastUserMsg.role === 'user') {
+             if (lastUserMsg.content.startsWith('/diff') || lastUserMsg.content.includes('JSON diff')) {
+                 schemaToUse = GRAMMARS.diff.schema;
+                 addToast("Constrained Sampling: Enforcing Strict JSON Diff", "info");
+             } else if (lastUserMsg.content.startsWith('/audit')) {
+                 schemaToUse = GRAMMARS.audit.schema;
+                 addToast("Constrained Sampling: Enforcing Structured Audit", "info");
+             }
+        }
+
         let fullText = '';
-        // Use config from Ref to avoid dependency cycle
-        const stream = streamChatCompletion(historyToUse, configRef.current);
+        const stream = streamChatCompletion(historyToUse, config, schemaToUse);
 
         for await (const chunk of stream) {
           fullText += chunk;
@@ -196,13 +225,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         setStatus(ChatStatus.ERROR);
         addToast("Failed to generate response", "error");
       }
-  }, [onSessionUpdate, addToast]); // Only depend on stable functions
+  };
 
-  const handleSendMessage = useCallback(async (textOverride?: string) => {
-    // Use params or state, but logic relies on Refs for history
-    const textToSend = textOverride || input; // Note: input is a state dependency, so this recreates on typing. 
-    // However, handleSendMessage is NOT passed to children, so it's okay if it changes.
-    
+  const handleSendMessage = async (textOverride?: string) => {
+    const textToSend = textOverride || input;
     if (!textToSend.trim() || status === ChatStatus.STREAMING) return;
 
     if (textToSend.trim() === '/admin') {
@@ -212,17 +238,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         return;
     }
 
-    // Check context window using latest messages Ref
-    const currentMessages = messagesRef.current;
     const tempUserMsgForCalc = {
         id: Date.now().toString(),
         role: 'user' as const,
         content: textToSend.trim(),
         timestamp: Date.now(),
     };
-    const potentialNewHistory = [...currentMessages, tempUserMsgForCalc];
-    const approximateTokens = Math.ceil(JSON.stringify(potentialNewHistory).length / 4);
-    const limit = configRef.current.contextWindowSize || 1000000;
+    const approximateTokens = Math.ceil(JSON.stringify([...messages, tempUserMsgForCalc]).length / 4);
+    const limit = config.contextWindowSize || 1000000;
 
     if (approximateTokens > limit) {
         addToast(`Context Window Exceeded (${approximateTokens} / ${limit}).`, "error");
@@ -237,41 +260,32 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       timestamp: Date.now(),
     };
 
-    const newMessages = [...currentMessages, userMessage];
+    const newMessages = [...messages, userMessage];
     onSessionUpdate({ messages: newMessages, suggestions: [] });
     
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     
     await triggerStream(newMessages);
-  }, [input, status, onSessionUpdate, onOpenAdmin, addToast, triggerStream]);
+  };
 
-  // This is the critical one to keep stable for MessageItems
-  const handleEditMessage = useCallback((messageId: string, newContent: string) => {
-      const currentMessages = messagesRef.current;
-      
-      // 1. Find index of message
-      const index = currentMessages.findIndex(m => m.id === messageId);
+  const handleEditMessage = (messageId: string, newContent: string) => {
+      const index = messages.findIndex(m => m.id === messageId);
       if (index === -1) return;
 
-      // 2. Branch history: keep everything BEFORE this message
-      const historyPrefix = currentMessages.slice(0, index);
-
-      // 3. Create new version of this message
+      const historyPrefix = messages.slice(0, index);
       const updatedMessage: Message = {
-          ...currentMessages[index],
+          ...messages[index],
           content: newContent,
           timestamp: Date.now()
       };
 
-      // 4. Construct new history
       const newHistory = [...historyPrefix, updatedMessage];
       onSessionUpdate({ messages: newHistory });
 
-      // 5. Re-trigger streaming from this point
       addToast("Regenerating response...", "info");
       triggerStream(newHistory);
-  }, [onSessionUpdate, addToast, triggerStream]);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -333,6 +347,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                           isStreaming={status === ChatStatus.STREAMING && index === messages.length - 1 && msg.role === 'model'}
                           isTerminalMode={isTerminalMode}
                           onEdit={handleEditMessage}
+                          onExecutionComplete={handleExecutionComplete}
+                          onNodeClick={handleNodeClick}
                         />
                     ))}
                     

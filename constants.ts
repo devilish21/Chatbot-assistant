@@ -1,5 +1,6 @@
 
 import { AppConfig, SlashCommand } from './types';
+import { Schema, Type } from "@google/genai";
 
 export const DEFAULT_CONFIG: AppConfig = {
   // Endpoint is not used for Gemini SDK but kept for type compatibility
@@ -30,6 +31,50 @@ export const DEFAULT_CONFIG: AppConfig = {
   agentMode: true, // Default to enabled for the demo
 };
 
+// --- GRAMMAR CONSTRAINTS (GBNF & SCHEMAS) ---
+// These define the strict structure models MUST follow.
+// GBNF is for Local LLMs (Llama.cpp/Ollama). Schemas are for Gemini/OpenAI.
+
+export const GRAMMARS = {
+    // 1. Strict Diff Grammar
+    diff: {
+        // Future-proof: GBNF string for Llama.cpp
+        gbnf: `root ::= "{" space "\\"original\\":" space string "," space "\\"modified\\":" space string "}" space
+               string ::= "\\"" ( [^"\\\\] | "\\\\" (["\\\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]) )* "\\"" space`,
+        
+        // Current: Gemini Schema
+        schema: {
+            type: Type.OBJECT,
+            properties: {
+                original: { type: Type.STRING, description: "The original code snippet before changes." },
+                modified: { type: Type.STRING, description: "The new code snippet after changes." }
+            },
+            required: ["original", "modified"]
+        } as Schema
+    },
+
+    // 2. Analysis Grammar (Structured Audit)
+    audit: {
+        schema: {
+            type: Type.OBJECT,
+            properties: {
+                score: { type: Type.INTEGER, description: "Security score from 0-100" },
+                issues: { 
+                    type: Type.ARRAY, 
+                    items: { 
+                        type: Type.OBJECT,
+                        properties: {
+                            severity: { type: Type.STRING, enum: ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
+                            description: { type: Type.STRING },
+                            fix: { type: Type.STRING }
+                        }
+                    }
+                }
+            }
+        } as Schema
+    }
+};
+
 export const SLASH_COMMANDS: SlashCommand[] = [
   { 
     key: '/audit', 
@@ -53,7 +98,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     key: '/diff',
     label: '/diff',
     description: 'Generate a Code Diff (Agentic)',
-    prompt: 'I want to refactor some code. \nOriginal Code:\n[PASTE HERE]\n\nRequirement:\n[DESCRIBE CHANGE]\n\nRespond using the JSON diff format.'
+    prompt: 'I want to refactor some code. \nOriginal Code:\n[PASTE HERE]\n\nRequirement:\n[DESCRIBE CHANGE]\n\n'
   },
   { 
     key: '/ci', 

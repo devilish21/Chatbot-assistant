@@ -8,9 +8,18 @@ interface MessageItemProps {
   isStreaming?: boolean;
   isTerminalMode: boolean;
   onEdit?: (messageId: string, newContent: string) => void;
+  onExecutionComplete?: (result: { success: boolean; output: string }) => void;
+  onNodeClick?: (text: string) => void;
 }
 
-const MessageItemComponent = ({ message, isStreaming, isTerminalMode, onEdit }: MessageItemProps) => {
+export const MessageItem = React.memo(({ 
+    message, 
+    isStreaming, 
+    isTerminalMode, 
+    onEdit,
+    onExecutionComplete,
+    onNodeClick
+}: MessageItemProps) => {
   const isUser = message.role === 'user';
   const [isCopied, setIsCopied] = useState(false);
   
@@ -22,7 +31,6 @@ const MessageItemComponent = ({ message, isStreaming, isTerminalMode, onEdit }: 
   useEffect(() => {
       if (isEditing && editInputRef.current) {
           editInputRef.current.focus();
-          // Auto-resize height
           editInputRef.current.style.height = 'auto';
           editInputRef.current.style.height = editInputRef.current.scrollHeight + 'px';
       }
@@ -58,12 +66,21 @@ const MessageItemComponent = ({ message, isStreaming, isTerminalMode, onEdit }: 
   };
 
   // MEMOIZED CONTENT RENDERING
-  // This parsing logic is heavy (regex + recursive splitting). 
-  // useMemo ensures we only run it when content or visual mode changes.
   const parsedContent = useMemo(() => {
-      const text = message.content;
+      const text = message.content || '';
 
-      // 1. Jira Ticket Renderer (Helper)
+      // --- HEURISTIC: AUTO-DETECT STRICT JSON (GRAMMAR CONSTRAINED OUTPUT) ---
+      if (text.trim().startsWith('{') && text.includes('"original"') && text.includes('"modified"')) {
+          try {
+              return <CodeBlock language="json-diff" code={text} />;
+          } catch (e) {
+              // Fallback
+          }
+      }
+
+      // --- HELPERS ---
+      
+      // 1. Jira Ticket Renderer
       const renderJiraTicket = (ticketId: string, key: string) => (
         <div key={key} className={`inline-flex items-center gap-2 px-2 py-1 mx-1 rounded border align-middle select-none cursor-pointer transition-all hover:scale-105 ${
             isTerminalMode 
@@ -115,42 +132,99 @@ const MessageItemComponent = ({ message, isStreaming, isTerminalMode, onEdit }: 
         return elements;
       };
 
-      // 3. Main Content Splitter (Code Blocks)
-      const parts = [];
-      const codeBlockRegex = /```(\w+)?\s*([\s\S]*?)```/g;
+      // 3. Content Parser with Code Blocks
+      const parseContentWithCode = (content: string, keyPrefix: string) => {
+        const segments: React.ReactNode[] = [];
+        const codeBlockRegex = /```(\w+)?\s*([\s\S]*?)```/g;
+        let lastIdx = 0;
+        let match;
+
+        while ((match = codeBlockRegex.exec(content)) !== null) {
+            if (match.index > lastIdx) {
+                segments.push(
+                    <span key={`${keyPrefix}-txt-${lastIdx}`} className="whitespace-pre-wrap">
+                        {parseInlineFormatting(content.substring(lastIdx, match.index))}
+                    </span>
+                );
+            }
+            segments.push(
+                <CodeBlock 
+                    key={`${keyPrefix}-code-${match.index}`} 
+                    language={match[1] || ''} 
+                    code={match[2]}
+                    onExecutionComplete={onExecutionComplete}
+                    onNodeClick={onNodeClick}
+                />
+            );
+            lastIdx = match.index + match[0].length;
+        }
+
+        if (lastIdx < content.length) {
+            segments.push(
+                <span key={`${keyPrefix}-txt-${lastIdx}`} className="whitespace-pre-wrap">
+                    {parseInlineFormatting(content.substring(lastIdx))}
+                </span>
+            );
+        }
+        return segments;
+      };
+
+      // 4. Thought Parser (Streaming Aware)
+      const renderThought = (content: string, key: string, isOpen: boolean = false) => (
+         <details key={key} className="mb-2 group/thought" open={isOpen}>
+             <summary className={`text-[10px] cursor-pointer select-none font-mono uppercase tracking-wider opacity-60 hover:opacity-100 flex items-center gap-2 ${isTerminalMode ? 'text-green-600' : 'text-stc-purple/60'}`}>
+                 <span className="transition-transform group-open/thought:rotate-90">▶</span>
+                 {isOpen ? <span className="animate-pulse flex items-center gap-2">Thinking... <span className="w-1 h-1 bg-current rounded-full animate-bounce"></span></span> : "AI_REASONING_PROCESS"}
+             </summary>
+             <div className={`mt-1 pl-4 border-l-2 text-[10px] font-mono whitespace-pre-wrap opacity-80 p-2 ${isTerminalMode ? 'border-green-900 text-green-700' : 'border-stc-purple/10 text-gray-500'}`}>
+                 {content}
+             </div>
+         </details>
+      );
+
+      const parts: React.ReactNode[] = [];
+      
+      // Strategy: Find ALL closed thoughts first
+      const closedThoughtRegex = /<thought>([\s\S]*?)<\/thought>/g;
       let lastIndex = 0;
       let match;
-
-      while ((match = codeBlockRegex.exec(text)) !== null) {
-        if (match.index > lastIndex) {
-          parts.push(
-            <span key={`text-${lastIndex}`} className="whitespace-pre-wrap animate-in fade-in duration-300">
-              {parseInlineFormatting(text.substring(lastIndex, match.index))}
-            </span>
-          );
-        }
-        parts.push(
-          <CodeBlock 
-            key={`code-${match.index}`} 
-            language={match[1] || ''} 
-            code={match[2]} 
-          />
-        );
-        lastIndex = match.index + match[0].length;
+      
+      while ((match = closedThoughtRegex.exec(text)) !== null) {
+          // Render text before thought
+          if (match.index > lastIndex) {
+              const pre = text.substring(lastIndex, match.index);
+              parts.push(...parseContentWithCode(pre, `pre-${match.index}`));
+          }
+          // Render Thought
+          parts.push(renderThought(match[1], `thought-${match.index}`, false));
+          lastIndex = match.index + match[0].length;
+      }
+      
+      // Check remaining text for OPEN thought (Streaming)
+      const remaining = text.substring(lastIndex);
+      const openThoughtRegex = /<thought>([\s\S]*)$/;
+      const openMatch = remaining.match(openThoughtRegex);
+      
+      if (openMatch) {
+          // Text before open thought
+          if (openMatch.index && openMatch.index > 0) {
+              const pre = remaining.substring(0, openMatch.index);
+              parts.push(...parseContentWithCode(pre, 'pre-open'));
+          }
+          // Open Thought (Auto-Expanded)
+          parts.push(renderThought(openMatch[1], 'thought-open', true));
+      } else {
+          // Just plain text
+          if (remaining) {
+              parts.push(...parseContentWithCode(remaining, 'post'));
+          }
       }
 
-      if (lastIndex < text.length) {
-        parts.push(
-          <span key={`text-${lastIndex}`} className="whitespace-pre-wrap animate-in fade-in duration-300">
-             {parseInlineFormatting(text.substring(lastIndex))}
-          </span>
-        );
-      }
       return parts;
 
-  }, [message.content, isTerminalMode]); // Only re-run if content or mode changes
+  }, [message.content, isTerminalMode, onExecutionComplete, onNodeClick]);
 
-  // Terminal Mode Style (Hacker Green)
+  // Terminal Mode Style
   if (isTerminalMode) {
       return (
         <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-4 group`}>
@@ -216,12 +290,11 @@ const MessageItemComponent = ({ message, isStreaming, isTerminalMode, onEdit }: 
       );
   }
 
-  // GUI Mode Style (Corporate STC)
+  // GUI Mode Style
   return (
     <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-6 group px-2`}>
         <div className={`flex gap-4 max-w-3xl w-full ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
             
-            {/* Avatar */}
             <div className={`
                 flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center shadow-lg border
                 ${isUser 
@@ -235,7 +308,6 @@ const MessageItemComponent = ({ message, isStreaming, isTerminalMode, onEdit }: 
                 )}
             </div>
 
-            {/* Bubble */}
             <div className={`
                 flex-1 min-w-0 flex flex-col 
                 ${isUser ? 'items-end' : 'items-start'}
@@ -248,7 +320,6 @@ const MessageItemComponent = ({ message, isStreaming, isTerminalMode, onEdit }: 
                         {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     
-                    {/* Edit Button for User */}
                     {isUser && !isEditing && onEdit && (
                         <button 
                             onClick={() => setIsEditing(true)}
@@ -258,7 +329,6 @@ const MessageItemComponent = ({ message, isStreaming, isTerminalMode, onEdit }: 
                             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                         </button>
                     )}
-
                     {!isUser && (
                          <button onClick={handleCopy} className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stc-purple hover:text-stc-coral"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -304,16 +374,11 @@ const MessageItemComponent = ({ message, isStreaming, isTerminalMode, onEdit }: 
         </div>
     </div>
   );
-};
-
-// Optimized equality comparison
-export const MessageItem = React.memo(MessageItemComponent, (prevProps, nextProps) => {
+}, (prevProps, nextProps) => {
     return (
         prevProps.message.content === nextProps.message.content &&
         prevProps.isStreaming === nextProps.isStreaming &&
         prevProps.message.isError === nextProps.message.isError &&
         prevProps.isTerminalMode === nextProps.isTerminalMode
-        // onEdit is now referentially stable from parent, so we can either include it or ignore it safely.
-        // ignoring it here assumes it never changes, which is true with the Ref pattern in ChatInterface.
     );
 });

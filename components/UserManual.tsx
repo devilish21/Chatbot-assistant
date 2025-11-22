@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface UserManualProps {
   isOpen: boolean;
@@ -24,21 +24,147 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
     return `px-4 py-2 text-xs font-bold border-b-2 transition-colors ${isActive ? 'border-stc-coral text-stc-purple bg-stc-purple/5' : 'border-transparent text-gray-400 hover:text-stc-purple'}`;
   };
 
-  const FeatureCard = ({ title, icon, description, usage }: { title: string, icon: React.ReactNode, description: string, usage: string }) => (
-    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-        <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm">{title}</h3>
-            <div className={`w-6 h-6 flex items-center justify-center rounded border ${isTerminalMode ? 'border-green-500' : 'border-stc-purple/30'}`}>
-                {icon}
-            </div>
-        </div>
-        <p className="text-xs opacity-70 leading-relaxed">
-            {description}
-        </p>
-        <div className={`mt-2 pt-3 border-t text-[10px] ${isTerminalMode ? 'border-green-500/30' : 'border-stc-purple/10'}`}>
-            <span className="font-bold uppercase opacity-50 mr-2">How to use:</span>
-            <span className="opacity-90">{usage}</span>
-        </div>
+  // --- INTERACTIVE DEMO COMPONENTS ---
+
+  const AutoFixDemo = () => {
+      const [state, setState] = useState<'idle' | 'error' | 'fixing' | 'fixed'>('idle');
+      
+      useEffect(() => {
+          if (state === 'error') setTimeout(() => setState('fixing'), 1500);
+          if (state === 'fixing') setTimeout(() => setState('fixed'), 1500);
+      }, [state]);
+
+      return (
+          <div className={`mt-3 border rounded p-2 text-[10px] font-mono ${isTerminalMode ? 'bg-black border-green-500/30' : 'bg-slate-900 text-slate-300'}`}>
+              <div className="flex justify-between border-b border-white/10 pb-1 mb-2">
+                  <span>script.py</span>
+                  <button 
+                    onClick={() => setState('error')} 
+                    disabled={state !== 'idle' && state !== 'fixed'}
+                    className={`px-2 rounded ${state === 'idle' || state === 'fixed' ? 'bg-green-600 text-white' : 'bg-gray-600 opacity-50'}`}
+                  >
+                      {state === 'idle' || state === 'fixed' ? 'Run Script' : 'Running...'}
+                  </button>
+              </div>
+              
+              {state === 'idle' && <div className="text-gray-400">print(10 / 0) # Mistake</div>}
+              
+              {state === 'error' && (
+                  <div className="animate-in fade-in">
+                      <div className="text-red-400">ZeroDivisionError: division by zero</div>
+                      <div className="text-yellow-400 mt-1">⚠ Agent detected error...</div>
+                  </div>
+              )}
+              
+              {state === 'fixing' && (
+                   <div className="animate-in fade-in">
+                       <div className="text-blue-400">&gt; Analyzing stack trace...</div>
+                       <div className="text-blue-400">&gt; Rewriting code...</div>
+                   </div>
+              )}
+
+              {state === 'fixed' && (
+                  <div className="animate-in fade-in">
+                       <div className="text-green-400">print(10 / 1) # Auto-Fixed</div>
+                       <div className="text-green-400">&gt; Output: 10.0</div>
+                  </div>
+              )}
+          </div>
+      );
+  };
+
+  const DiffDemo = () => {
+      const [mode, setMode] = useState<'raw' | 'diff'>('diff');
+      return (
+          <div className="mt-3">
+              <div className="flex gap-2 mb-2">
+                  <button onClick={() => setMode('raw')} className={`text-[9px] px-2 py-0.5 rounded border ${mode === 'raw' ? 'bg-current text-black' : 'opacity-50'}`}>Raw</button>
+                  <button onClick={() => setMode('diff')} className={`text-[9px] px-2 py-0.5 rounded border ${mode === 'diff' ? 'bg-current text-black' : 'opacity-50'}`}>Visual Diff</button>
+              </div>
+              <div className={`border rounded p-2 text-[10px] font-mono h-20 overflow-hidden ${isTerminalMode ? 'bg-black border-green-500/30' : 'bg-slate-900 text-slate-300'}`}>
+                  {mode === 'raw' ? (
+                      <div className="opacity-70">
+                          Old: server_port: 80<br/>
+                          New: server_port: 8080
+                      </div>
+                  ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-red-900/30 text-red-300 p-1">server_port: 80</div>
+                          <div className="bg-green-900/30 text-green-300 p-1">server_port: 8080</div>
+                      </div>
+                  )}
+              </div>
+          </div>
+      );
+  };
+
+  const SchemaDemo = () => {
+      const [isStrict, setIsStrict] = useState(false);
+      return (
+          <div className="mt-3">
+             <div className="flex items-center gap-2 mb-2">
+                 <label className="text-[10px] font-bold uppercase">Strict Mode:</label>
+                 <button 
+                    onClick={() => setIsStrict(!isStrict)}
+                    className={`w-8 h-4 rounded-full relative transition-colors ${isStrict ? 'bg-green-500' : 'bg-gray-600'}`}
+                 >
+                     <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${isStrict ? 'translate-x-4' : ''}`}></div>
+                 </button>
+             </div>
+             <div className={`border rounded p-2 text-[10px] font-mono h-24 overflow-y-auto ${isTerminalMode ? 'bg-black border-green-500/30' : 'bg-slate-900 text-slate-300'}`}>
+                 {!isStrict ? (
+                     <div className="opacity-70 whitespace-pre-wrap">
+                         Here is the data you asked for. It looks like this:<br/>
+                         name: "Prod", status: "Active"<br/>
+                         I hope that helps!
+                     </div>
+                 ) : (
+                     <div className="text-green-400 whitespace-pre-wrap">
+                         {`{
+  "environment": "Prod",
+  "status": "Active",
+  "uptime": 99.9
+}`}
+                     </div>
+                 )}
+             </div>
+          </div>
+      );
+  };
+
+  const CoTDemo = () => {
+      const [isOpen, setIsOpen] = useState(false);
+      return (
+          <div className="mt-3">
+              <div 
+                onClick={() => setIsOpen(!isOpen)}
+                className={`border rounded p-2 cursor-pointer select-none ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-gray-300 bg-gray-50'}`}
+              >
+                  <div className="flex items-center gap-2 text-[10px] font-bold uppercase opacity-70">
+                      <span>{isOpen ? '▼' : '▶'}</span>
+                      <span>Thinking Process</span>
+                  </div>
+                  {isOpen && (
+                      <div className={`mt-2 pl-4 border-l-2 text-[10px] font-mono ${isTerminalMode ? 'border-green-500/50 text-green-400' : 'border-stc-purple/30 text-gray-600'}`}>
+                          &gt; Detecting user intent: "Refactor"<br/>
+                          &gt; Analyzing current context...<br/>
+                          &gt; Identifying variables...<br/>
+                          &gt; Generating optimization strategy...
+                      </div>
+                  )}
+              </div>
+              <div className="mt-2 text-[11px] pl-2 opacity-80">
+                  Here is the optimized solution based on my analysis...
+              </div>
+          </div>
+      );
+  };
+
+  const InteractiveFeature = ({ title, description, Demo }: { title: string, description: string, Demo: React.FC }) => (
+    <div className={`p-4 rounded-lg border flex flex-col gap-2 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
+        <h3 className="font-bold text-sm uppercase tracking-wider">{title}</h3>
+        <p className="text-xs opacity-70 leading-relaxed min-h-[40px]">{description}</p>
+        <Demo />
     </div>
   );
 
@@ -52,7 +178,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
         <div className={`flex items-center justify-between px-6 py-4 border-b ${isTerminalMode ? 'border-green-500/50 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
             <div className="flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-                <h2 className="text-lg font-bold tracking-wider">DEVOPS CHATBOT MANUAL v3.1</h2>
+                <h2 className="text-lg font-bold tracking-wider">DEVOPS CHATBOT MANUAL v3.2</h2>
             </div>
             <button onClick={onClose} className="hover:opacity-70 transition-opacity">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -62,7 +188,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
         {/* Tabs */}
         <div className={`flex px-6 border-b ${isTerminalMode ? 'border-green-500/30' : 'border-stc-purple/10'}`}>
             <button onClick={() => setActiveTab('overview')} className={tabClass('overview')}>OVERVIEW</button>
-            <button onClick={() => setActiveTab('features')} className={tabClass('features')}>SYSTEM FEATURES</button>
+            <button onClick={() => setActiveTab('features')} className={tabClass('features')}>INTERACTIVE FEATURES</button>
             <button onClick={() => setActiveTab('commands')} className={tabClass('commands')}>COMMANDS</button>
             <button onClick={() => setActiveTab('modes')} className={tabClass('modes')}>VISUAL MODES</button>
         </div>
@@ -86,7 +212,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                        <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
+                         <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
                             <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                                 Agentic Execution
@@ -111,50 +237,32 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                 </div>
             )}
 
-            {/* TAB: FEATURES */}
+            {/* TAB: FEATURES (INTERACTIVE) */}
             {activeTab === 'features' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4 duration-300">
                     
-                    <FeatureCard 
+                    <InteractiveFeature 
                         title="Agentic Auto-Fix Loop" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>}
-                        description="Self-healing execution environment. If a Python script fails, the agent automatically analyzes the error, rewrites the code, and re-runs it without user intervention."
-                        usage="Ask for a calculation or data processing task. If the initial code fails, watch the bot auto-correct."
+                        description="The AI detects execution errors in Python scripts and automatically rewrites the code to fix them."
+                        Demo={AutoFixDemo}
                     />
 
-                    <FeatureCard 
+                    <InteractiveFeature 
+                        title="Strict Schema Enforcement" 
+                        description="Forces the model to output machine-readable JSON instead of conversational text. Crucial for automation."
+                        Demo={SchemaDemo}
+                    />
+
+                    <InteractiveFeature 
                         title="Visual Diff Engine" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12h6"/><path d="M12 3v18"/><path d="M3 6h18"/><path d="M3 18h18"/></svg>}
-                        description="Side-by-side code comparison. Visualizes infrastructure changes (Red/Green diffs) to validate refactors before applying them."
-                        usage="Use the '/diff' command or ask the bot to 'Refactor this code'. The output will show a split view."
+                        description="Automatically renders side-by-side comparisons for code refactoring requests."
+                        Demo={DiffDemo}
                     />
 
-                    <FeatureCard 
-                        title="Cognitive Reasoning (CoT)" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 2a10 10 0 0 1 10 10h-10z"/><path d="m12 12 4.09-4.09L12 2"/></svg>}
-                        description="Transparent reasoning process. Expand the 'Thinking Process' accordion to see how the AI deconstructed complex DevOps problems."
-                        usage="Ask a complex logical question. Click 'Thinking Process' to reveal the internal step-by-step logic."
-                    />
-
-                    <FeatureCard 
-                        title="Interactive Architecture" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                        description="Automatically renders Mermaid.js diagrams. Click on diagram nodes to automatically inject that component name into the chat for follow-up."
-                        usage="Ask for a diagram (e.g., 'Draw a flow for OAuth'). Click a node like 'AuthService' to ask about it."
-                    />
-
-                    <FeatureCard 
-                        title="Python Sandbox" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>}
-                        description="Execute Python code securely in your browser using WebAssembly (Pyodide). Perfect for math, JSON parsing, or testing logic."
-                        usage="Ask the bot to write a Python script. Click 'Run' on the code block."
-                    />
-
-                    <FeatureCard 
-                        title="Prompt Library" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg>}
-                        description="Save frequently used templates or complex queries. Inject them into the chat with a single click."
-                        usage="Click the Book icon inside the input bar. Use '+ New Snippet' to save current text."
+                    <InteractiveFeature 
+                        title="Chain of Thought (CoT)" 
+                        description="Reveals the internal logic and reasoning steps before the final answer is generated."
+                        Demo={CoTDemo}
                     />
                 </div>
             )}
@@ -192,9 +300,9 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
 
                     <div className="grid gap-4">
                         {[
-                            { cmd: '/diff', desc: 'Visual Diff', detail: 'Compare original vs modified code side-by-side.' },
+                            { cmd: '/diff', desc: 'Visual Diff', detail: 'Compare original vs modified code side-by-side. Uses Strict JSON Mode.' },
                             { cmd: '/admin', desc: 'System Administration', detail: 'Login to configure token limits, context size, and API Keys.' },
-                            { cmd: '/audit', desc: 'Security Audit', detail: 'Paste code snippets to get a breakdown of vulnerabilities.' },
+                            { cmd: '/audit', desc: 'Security Audit', detail: 'Paste code to get a structured vulnerability breakdown. Uses Strict JSON Mode.' },
                             { cmd: '/docker', desc: 'Generate Dockerfile', detail: 'Creates production-ready, multi-stage Dockerfiles.' },
                             { cmd: '/k8s', desc: 'Kubernetes Manifests', detail: 'Generates Deployment, Service, and Ingress YAMLs.' },
                             { cmd: '/ci', desc: 'Pipeline Generation', detail: 'Scaffolds GitHub Actions or Jenkinsfiles.' },
@@ -257,3 +365,4 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
     </div>
   );
 };
+    
