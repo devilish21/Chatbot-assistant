@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { ChatInterface } from './components/ChatInterface';
 import { SessionSidebar } from './components/SessionSidebar';
@@ -10,10 +11,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { ToolsModal } from './components/ToolsModal';
 import { AppConfig, ChatSession, Toast, Snippet } from './types';
 import { DEFAULT_CONFIG } from './constants';
-
-const STORAGE_KEY = 'devops_chatbot_sessions';
-const SNIPPETS_KEY = 'devops_chatbot_snippets';
-const CONFIG_KEY = 'devops_chatbot_config';
+import { db, STORES } from './services/db';
 
 const App: React.FC = () => {
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
@@ -37,56 +35,64 @@ const App: React.FC = () => {
 
   // 1. Load Data (Config, Sessions, Snippets) on Mount
   useEffect(() => {
-    const savedConfig = localStorage.getItem(CONFIG_KEY);
-    if (savedConfig) {
+    const loadData = async () => {
         try {
-            setConfig(prev => ({...prev, ...JSON.parse(savedConfig)}));
-        } catch(e) { console.error("Config parse error", e); }
-    }
+            const savedConfig = await db.get(STORES.CONFIG, 'main') as AppConfig | undefined;
+            if (savedConfig) {
+                setConfig(prev => ({...prev, ...savedConfig}));
+            }
 
-    setTimeout(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setSessions(parsed);
-              setActiveSessionId(parsed[0].id);
+            const savedSessions = await db.getAll(STORES.SESSIONS) as ChatSession[];
+            if (savedSessions && savedSessions.length > 0) {
+                // Sort by timestamp desc
+                savedSessions.sort((a, b) => b.timestamp - a.timestamp);
+                setSessions(savedSessions);
+                setActiveSessionId(savedSessions[0].id);
             } else {
                 createNewSession(false);
             }
-          } catch (e) {
-            console.error("Failed to parse sessions", e);
-            createNewSession(false);
-          }
-        } else {
-            createNewSession(false);
-        }
-        setIsLoaded(true);
-    }, 10);
 
-    const savedSnippets = localStorage.getItem(SNIPPETS_KEY);
-    if (savedSnippets) {
-        try {
-            setSnippets(JSON.parse(savedSnippets));
-        } catch (e) { console.error("Failed to parse snippets", e); }
-    }
+            const savedSnippets = await db.getAll(STORES.SNIPPETS) as Snippet[];
+            if (savedSnippets) {
+                setSnippets(savedSnippets);
+            }
+        } catch (e) {
+            console.error("Failed to load data from IndexedDB", e);
+            // Fallback if DB fails
+            createNewSession(false);
+        } finally {
+            setIsLoaded(true);
+        }
+    };
+    loadData();
   }, []);
 
   // 2. Persistence Effects
+  
+  // Persist Sessions: We only update the CHANGED session ideally, 
+  // but for simplicity in this step we will bulk put for now or handle granularly later.
+  // Given react strict mode, we should be careful.
+  // Note: 'sessions' updates frequently. Saving all every time is costly.
+  // We rely on onSessionUpdate handlers to save individual sessions if possible,
+  // but here we will use a debounced save for the whole array or just the active one.
   useEffect(() => {
-    if (isLoaded && sessions.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-    }
+      if (!isLoaded) return;
+      const timeout = setTimeout(() => {
+          db.putAll(STORES.SESSIONS, sessions).catch(e => console.error("Failed to save sessions", e));
+      }, 1000);
+      return () => clearTimeout(timeout);
   }, [sessions, isLoaded]);
 
   useEffect(() => {
-      localStorage.setItem(SNIPPETS_KEY, JSON.stringify(snippets));
-  }, [snippets]);
+      if (!isLoaded) return;
+      db.putAll(STORES.SNIPPETS, snippets).catch(e => console.error("Failed to save snippets", e));
+  }, [snippets, isLoaded]);
 
   useEffect(() => {
-      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-  }, [config]);
+      if (!isLoaded) return;
+      // Store config with a fixed key
+      db.put(STORES.CONFIG, { ...config, key: 'main' }).catch(e => console.error("Failed to save config", e));
+  }, [config, isLoaded]);
 
   const createNewSession = (shouldToast = true) => {
     const welcomeMsg = config.welcomeMessage || DEFAULT_CONFIG.welcomeMessage;
@@ -110,10 +116,11 @@ const App: React.FC = () => {
     if (shouldToast && isLoaded) addToast('New session created', 'info'); 
   };
 
-  const handleUpdateSession = (updates: Partial<ChatSession>) => {
+  const handleUpdateSession = React.useCallback((updates: Partial<ChatSession>) => {
     setSessions(prev => prev.map(session => {
         if (session.id === activeSessionId) {
             const updatedSession = { ...session, ...updates };
+            // Auto-update title based on first message
             if (session.title === 'New Session') {
                 const firstUserMsg = updatedSession.messages.find(m => m.role === 'user');
                 if (firstUserMsg) {
@@ -124,7 +131,7 @@ const App: React.FC = () => {
         }
         return session;
     }));
-  };
+  }, [activeSessionId]);
 
   const handleRenameSession = (id: string, newTitle: string) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, title: newTitle } : s));
@@ -133,6 +140,7 @@ const App: React.FC = () => {
   const handleDeleteSession = (id: string) => {
     const newSessions = sessions.filter(s => s.id !== id);
     setSessions(newSessions);
+    db.delete(STORES.SESSIONS, id).catch(e => console.error("DB Delete failed", e));
     
     if (newSessions.length === 0) {
         createNewSession();
@@ -150,8 +158,12 @@ const App: React.FC = () => {
       }, 3000);
   };
 
-  const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
-  const tokenUsage = activeSession ? Math.ceil(JSON.stringify(activeSession.messages).length / 4) : 0;
+  // Memoized derived state
+  const activeSession = React.useMemo(() => sessions.find(s => s.id === activeSessionId) || sessions[0], [sessions, activeSessionId]);
+  
+  const tokenUsage = React.useMemo(() => {
+      return activeSession ? Math.ceil(JSON.stringify(activeSession.messages).length / 4) : 0;
+  }, [activeSession]);
 
   const themeClasses = isTerminalMode 
     ? "bg-black text-green-500 font-mono selection:bg-green-900 selection:text-green-100" 
@@ -161,7 +173,7 @@ const App: React.FC = () => {
     ? "border-b border-green-500/50 bg-black/90"
     : "border-b border-stc-purple/10 bg-stc-white/80";
 
-  if (!activeSession && !isLoaded) return <div className={`h-screen w-full ${isTerminalMode ? 'bg-black' : 'bg-stc-light'}`}></div>;
+  if (!activeSession && !isLoaded) return <div className={`h-screen w-full ${isTerminalMode ? 'bg-black' : 'bg-stc-light'} flex items-center justify-center`}><span className="animate-pulse">INITIALIZING_SYSTEM...</span></div>;
 
   return (
     <div className={`relative flex h-screen w-full overflow-hidden transition-colors duration-300 ${themeClasses}`}>

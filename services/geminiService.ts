@@ -15,8 +15,16 @@ const formatHistory = (messages: Message[]): Content[] => {
     }));
 };
 
+const getAIClient = (config: AppConfig) => {
+    const apiKey = config.apiKey || process.env.API_KEY;
+    if (!apiKey) {
+        throw new Error("API Key missing. Please configure it in Admin Panel.");
+    }
+    return new GoogleGenAI({ apiKey });
+};
+
 export async function* streamChatCompletion(messages: Message[], config: AppConfig) {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = getAIClient(config);
 
   const lastMessage = messages[messages.length - 1];
   const history = formatHistory(messages.slice(0, -1));
@@ -68,7 +76,7 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
 }
 
 export async function generateFollowUpQuestions(messages: Message[], config: AppConfig): Promise<string[]> {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = getAIClient(config);
   const recentHistory = messages.slice(-4);
   const history = formatHistory(recentHistory);
 

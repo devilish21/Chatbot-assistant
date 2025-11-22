@@ -1,5 +1,4 @@
 
-
 export interface AppConfig {
   endpoint: string;
   model: string; 
@@ -8,6 +7,7 @@ export interface AppConfig {
   enableSuggestions: boolean;
   enableVisualEffects?: boolean;
   // Admin Settings
+  apiKey?: string;
   maxOutputTokens?: number;
   contextWindowSize?: number;
   botName: string;
@@ -21,6 +21,9 @@ export interface Message {
   content: string;
   timestamp: number;
   isError?: boolean;
+  // Context Branching
+  versions?: { content: string, timestamp: number }[];
+  currentVersionIndex?: number;
 }
 
 export interface ChatSession {

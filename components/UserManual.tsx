@@ -52,7 +52,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
         <div className={`flex items-center justify-between px-6 py-4 border-b ${isTerminalMode ? 'border-green-500/50 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
             <div className="flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-                <h2 className="text-lg font-bold tracking-wider">DEVOPS CHATBOT MANUAL v2.9</h2>
+                <h2 className="text-lg font-bold tracking-wider">DEVOPS CHATBOT MANUAL v3.0</h2>
             </div>
             <button onClick={onClose} className="hover:opacity-70 transition-opacity">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -81,24 +81,24 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                         <p className="opacity-80 leading-relaxed">
                             An advanced interface bridging conversational AI with technical execution. 
                             Designed for SREs and Platform Engineers to debug infrastructure, 
-                            audit security, and generate code with high precision.
+                            visualize architecture, and run Python scripts directly in the browser.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
                         <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
                             <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                                Utilities Suite
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                Code Execution
                             </h3>
-                            <p className="text-xs opacity-70">Built-in validators for YAML, JSON formatting, and Base64 encoding/decoding without leaving the app.</p>
+                            <p className="text-xs opacity-70">Run Python scripts locally using WebAssembly (Pyodide) for math, logic, and data processing.</p>
                         </div>
                         <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
                             <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                                Prompt Library
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
+                                Visual Diagrams
                             </h3>
-                            <p className="text-xs opacity-70">Save, organize, and instantly inject complex engineering prompts or reusable code snippets.</p>
+                            <p className="text-xs opacity-70">Auto-render Mermaid.js diagrams for network topology, sequence flows, and Gantt charts.</p>
                         </div>
                         <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
                             <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
@@ -116,17 +116,24 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4 duration-300">
                     
                     <FeatureCard 
-                        title="DevOps Utilities" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>}
-                        description="A suite of client-side tools for validating K8s manifests (YAML), formatting JSON payloads, and handling Base64 secrets."
-                        usage="Click the 'Tools' button in the header, or press Ctrl+K and select 'YAML/JSON Validator'. Paste your content into the left pane."
+                        title="Python Runtime Sandbox" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>}
+                        description="Execute Python code securely in your browser using WebAssembly. Perfect for data processing, complex math, or testing logic."
+                        usage="Ask the bot to write a Python script (e.g., 'Write a script to parse JSON'). Click 'Run' on the code block."
+                    />
+
+                    <FeatureCard 
+                        title="Architecture Visualization" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
+                        description="Automatically renders Mermaid.js diagrams. Visualize CI/CD pipelines, network flows, and class structures instantly."
+                        usage="Ask for a diagram (e.g., 'Draw a sequence diagram for OAuth login'). The bot will render the chart in the chat."
                     />
 
                     <FeatureCard 
                         title="Admin Console" 
                         icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
-                        description="Restricted area to configure LLM parameters (Max Tokens, Context Window) and broadcast system alerts."
-                        usage="Type '/admin' in the chat input and press Enter. Default credentials are 'admin' / 'admin123'."
+                        description="Manage API Keys, configure LLM parameters (Max Tokens, Context Window), and broadcast system alerts."
+                        usage="Type '/admin' or use Command Palette. Login to secure your API Key or adjust model temperature."
                     />
 
                     <FeatureCard 
@@ -144,17 +151,10 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                     />
 
                     <FeatureCard 
-                        title="Log Analysis" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>}
-                        description="Drag and drop files directly into the window to have the AI analyze logs, configs, or code files."
-                        usage="Drag a .log, .json, .yaml, or .txt file from your desktop into the chat window. The content will automatically load into the input."
-                    />
-
-                    <FeatureCard 
-                        title="Infrastructure Hub" 
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>}
-                        description="Quick navigation to internal services like Jenkins, Nexus, and SonarQube."
-                        usage="Open the right sidebar (desktop only). Click a service icon to reveal direct links to specific instances."
+                        title="DevOps Utilities" 
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>}
+                        description="A suite of client-side tools for validating K8s manifests (YAML), formatting JSON payloads, and handling Base64 secrets."
+                        usage="Click the 'Tools' button in the header, or press Ctrl+K and select 'YAML/JSON Validator'."
                     />
                 </div>
             )}
@@ -192,8 +192,8 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
 
                     <div className="grid gap-4">
                         {[
-                            { cmd: '/admin', desc: 'System Administration', detail: 'Login to configure token limits, context size, and system prompts.' },
-                            { cmd: '/audit', desc: 'Security Audit', detail: 'Past code snippets to get a breakdown of vulnerabilities.' },
+                            { cmd: '/admin', desc: 'System Administration', detail: 'Login to configure token limits, context size, and API Keys.' },
+                            { cmd: '/audit', desc: 'Security Audit', detail: 'Paste code snippets to get a breakdown of vulnerabilities.' },
                             { cmd: '/docker', desc: 'Generate Dockerfile', detail: 'Creates production-ready, multi-stage Dockerfiles.' },
                             { cmd: '/k8s', desc: 'Kubernetes Manifests', detail: 'Generates Deployment, Service, and Ingress YAMLs.' },
                             { cmd: '/ci', desc: 'Pipeline Generation', detail: 'Scaffolds GitHub Actions or Jenkinsfiles.' },

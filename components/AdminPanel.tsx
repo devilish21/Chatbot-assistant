@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppConfig } from '../types';
 
 interface AdminPanelProps {
@@ -208,6 +208,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <div className="space-y-6 animate-in slide-in-from-right-4 duration-200">
                              <h3 className="text-sm font-bold uppercase border-b pb-2 opacity-70">Model Configuration</h3>
                              
+                             <div>
+                                <label className="block text-xs font-bold uppercase mb-2">Gemini API Key</label>
+                                <p className="text-[10px] opacity-70 mb-2">Override the default API key. Required for high-rate limits or custom billing projects.</p>
+                                <input 
+                                    type="password" 
+                                    value={localConfig.apiKey || ''}
+                                    onChange={e => setLocalConfig({...localConfig, apiKey: e.target.value})}
+                                    placeholder="Enter AI Studio Key..."
+                                    className={`w-full p-2 rounded text-sm ${inputClass}`}
+                                />
+                             </div>
+
                              <div>
                                 <label className="block text-xs font-bold uppercase mb-2">Context Window Size</label>
                                 <p className="text-[10px] opacity-70 mb-2">Total token capacity for history and inputs. Visualized in footer.</p>

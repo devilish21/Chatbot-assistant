@@ -260,7 +260,8 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
                 </div>
 
                 <div className={`
-                    px-5 py-3.5 shadow-xl text-sm leading-relaxed max-w-full w-full
+                    px-5 py-3.5 shadow-xl text-sm leading-relaxed max-w-full
+                    ${isEditing ? 'w-full' : 'w-fit break-words'}
                     ${isUser 
                         ? 'bg-stc-purple text-white rounded-2xl rounded-tr-sm' 
                         : 'bg-white border border-gray-100 text-gray-700 rounded-2xl rounded-tl-sm'}
@@ -297,4 +298,11 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
         </div>
     </div>
   );
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.message.content === nextProps.message.content &&
+        prevProps.isStreaming === nextProps.isStreaming &&
+        prevProps.message.isError === nextProps.message.isError &&
+        prevProps.isTerminalMode === nextProps.isTerminalMode
+    );
 });

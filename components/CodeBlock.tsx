@@ -1,15 +1,45 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface CodeBlockProps {
   language: string;
   code: string;
 }
 
+declare global {
+    interface Window {
+        loadPyodide: any;
+        mermaid: any;
+        pyodide: any;
+    }
+}
+
 export const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
   const [copied, setCopied] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [executionError, setExecutionError] = useState(false);
+  const mermaidRef = useRef<HTMLDivElement>(null);
+
+  const lang = language.toLowerCase();
+  const isMermaid = lang === 'mermaid';
+  const isPython = lang === 'python' || lang === 'py';
+  const isJS = lang === 'javascript' || lang === 'js';
+
+  useEffect(() => {
+      if (isMermaid && mermaidRef.current && window.mermaid) {
+          try {
+              window.mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+              const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+              window.mermaid.render(id, code).then(({ svg }: any) => {
+                  if (mermaidRef.current) mermaidRef.current.innerHTML = svg;
+              });
+          } catch (e) {
+              console.error("Mermaid render error", e);
+              if (mermaidRef.current) mermaidRef.current.innerText = "Failed to render diagram.";
+          }
+      }
+  }, [code, isMermaid]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);
@@ -17,39 +47,80 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleRun = () => {
+  const runPython = async () => {
+      try {
+          if (!window.pyodide) {
+              setOutput("Loading Python Engine (Pyodide)... this may take a moment...");
+              // Explicitly set indexURL to official CDN to ensure files are found
+              window.pyodide = await window.loadPyodide({
+                  indexURL: "https://pyodide-cdn2.iodide.io/v0.25.0/full/"
+              });
+          }
+          
+          const logs: string[] = [];
+          window.pyodide.setStdout({ batched: (msg: string) => logs.push(msg) });
+          
+          // Load micropip safely
+          try {
+            await window.pyodide.loadPackage("micropip");
+          } catch (e) {
+            console.warn("Failed to load micropip. Some features may be missing.", e);
+          }
+
+          await window.pyodide.runPythonAsync(code);
+          const result = logs.length > 0 ? logs.join('\n') : "(No output)";
+          
+          setOutput(result);
+          setExecutionError(false);
+      } catch (err: any) {
+          setOutput(`Python Error:\n${err.message}`);
+          setExecutionError(true);
+      }
+  };
+
+  const runJS = () => {
+      const logs: string[] = [];
+      const mockConsole = {
+          log: (...args: any[]) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ')),
+          warn: (...args: any[]) => logs.push('WARN: ' + args.join(' ')),
+          error: (...args: any[]) => logs.push('ERROR: ' + args.join(' ')),
+      };
+      
+      try {
+        const runFunc = new Function('console', code);
+        runFunc(mockConsole);
+        setOutput(logs.length > 0 ? logs.join('\n') : 'Script executed successfully (No output).');
+        setExecutionError(false);
+      } catch (err: any) {
+        setOutput(`Runtime Error: ${err.message}`);
+        setExecutionError(true);
+      }
+  };
+
+  const handleRun = async () => {
     setIsRunning(true);
     setOutput(null);
-    
-    setTimeout(() => {
-      const lang = language.toLowerCase();
-      let result = '';
+    setExecutionError(false);
 
+    // Small timeout to allow UI update
+    setTimeout(async () => {
       try {
-        if (lang === 'javascript' || lang === 'js') {
-            const logs: string[] = [];
-            const mockConsole = {
-                log: (...args: any[]) => logs.push(args.join(' ')),
-                warn: (...args: any[]) => logs.push('WARN: ' + args.join(' ')),
-                error: (...args: any[]) => logs.push('ERROR: ' + args.join(' ')),
-            };
-            const runFunc = new Function('console', code);
-            runFunc(mockConsole);
-            result = logs.length > 0 ? logs.join('\n') : 'Script executed successfully (No output).';
-        } else if (lang === 'python' || lang === 'py') {
-             result = `[SIMULATION] Python Interpreter v3.10\nRunning script...\n\n> Execution completed.\n(Actual execution requires backend sandbox)`;
+        if (isJS) {
+            runJS();
+        } else if (isPython) {
+            await runPython();
         } else if (lang === 'bash' || lang === 'sh') {
-             result = `[SIMULATION] user@devops-term:~$ ./${Date.now()}.sh\n> Applying configuration...\n> Done.`;
+             setOutput(`[SIMULATION] user@devops-term:~$ ./${Date.now()}.sh\n> Applying configuration...\n> Done.`);
         } else {
-             result = `[SIMULATION] Executing ${lang} snippet...\n> Validating syntax... OK\n> Execution simulation complete.`;
+             setOutput(`[SIMULATION] Executing ${lang} snippet...\n> Validating syntax... OK\n> Execution simulation complete.`);
         }
-      } catch (err: any) {
-        result = `Error: ${err.message}`;
+      } catch (e: any) {
+          setOutput(`Execution Failed: ${e.message}`);
+          setExecutionError(true);
+      } finally {
+          setIsRunning(false);
       }
-
-      setOutput(result);
-      setIsRunning(false);
-    }, 800);
+    }, 100);
   };
 
   // Simple Regex-based Syntax Highlighting
@@ -99,6 +170,19 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
     ));
   };
 
+  if (isMermaid) {
+      return (
+          <div className="my-3 rounded border border-stc-purple/30 bg-[#0b0214] w-full overflow-hidden shadow-md">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-stc-purple-deep/50 border-b border-stc-purple/20">
+                  <span className="text-[10px] font-mono text-stc-coral uppercase tracking-wider font-bold">DIAGRAM</span>
+              </div>
+              <div className="p-4 bg-white/5 flex justify-center">
+                  <div ref={mermaidRef} className="mermaid"></div>
+              </div>
+          </div>
+      );
+  }
+
   return (
     <div className="my-3 rounded border border-stc-purple/30 bg-[#0b0214] w-full overflow-hidden shadow-md">
       {/* Header */}
@@ -139,11 +223,13 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
 
       {/* Output Console */}
       {output !== null && (
-          <div className="border-t border-stc-purple/30">
-              <div className="bg-stc-purple-deep/50 p-1.5 border-b border-stc-purple/20">
-                  <span className="text-[9px] uppercase text-gray-500 font-semibold pl-1">Console Output</span>
+          <div className={`border-t ${executionError ? 'border-red-500/50' : 'border-stc-purple/30'}`}>
+              <div className={`p-1.5 border-b ${executionError ? 'bg-red-900/20 border-red-500/30' : 'bg-stc-purple-deep/50 border-stc-purple/20'}`}>
+                  <span className={`text-[9px] uppercase font-semibold pl-1 ${executionError ? 'text-red-400' : 'text-gray-500'}`}>
+                      {executionError ? 'Execution Error' : 'Console Output'}
+                  </span>
               </div>
-              <div className="p-2 bg-black/30 text-[10px] font-mono text-stc-coral whitespace-pre-wrap animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className={`p-2 text-[10px] font-mono whitespace-pre-wrap animate-in fade-in slide-in-from-top-2 duration-300 max-h-48 overflow-y-auto ${executionError ? 'text-red-300 bg-red-950/30' : 'bg-black/30 text-stc-coral'}`}>
                   {output}
               </div>
           </div>

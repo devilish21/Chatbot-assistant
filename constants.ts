@@ -10,6 +10,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   enableSuggestions: true,
   enableVisualEffects: true,
   // Admin Defaults
+  apiKey: '',
   maxOutputTokens: 1024,
   contextWindowSize: 1000, // Default context window
   botName: 'DevOps Assistant',
