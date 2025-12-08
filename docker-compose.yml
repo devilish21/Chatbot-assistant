@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  chatbot-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    restart: unless-stopped
+    depends_on:
+      - mcp-server
+    networks:
+      - app-network
+
+  mcp-server:
+    build:
+      context: ./chatbot-integrations
+      dockerfile: Dockerfile
+    ports:
+      - "3009:3009"
+    env_file:
+      - ./chatbot-integrations/.env
+    environment:
+      - PORT=3009
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3009/tools || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  jenkins:
+    image: jenkins/jenkins:jdk21
+    ports:
+      - "7080:8080"
+      - "60000:50000"
+    restart: unless-stopped
+    networks:
+      - app-network
+    volumes:
+      - jenkins_home:/var/jenkins_home
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  jenkins_home:
