@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import EventSource from "eventsource";
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -16,23 +17,23 @@ app.use(express.json());
 
 let mcpClient = null;
 let mcpTransport = null;
-
-// Initialize MCP Client
 async function initMcpClient() {
     if (mcpClient) return mcpClient;
 
-    // Use the local Jenkins MCP implementation
-    const serverCommand = process.env.MCP_SERVER_COMMAND || "node";
-    const serverArgs = process.env.MCP_SERVER_ARGS ? process.env.MCP_SERVER_ARGS.split(' ') : ["./jenkins-mcp-server.js"];
+    const sseUrl = process.env.MCP_SERVER_URL || "http://jenkins-mcp-enterprise:8000/mcp";
 
-    console.log(`Connecting to MCP Server: ${serverCommand} ${serverArgs.join(' ')}`);
-    console.log("Environment check - JENKINS_URL:", process.env.JENKINS_URL ? "Set" : "Missing");
-    console.log("Environment check - JENKINS_USER:", process.env.JENKINS_USER ? "Set" : "Missing");
+    console.log(`Connecting to MCP Server via SSE: ${sseUrl}`);
 
-    mcpTransport = new StdioClientTransport({
-        command: serverCommand,
-        args: serverArgs,
-        env: process.env
+    // Create SSE Transport
+    // Note: ensure we pass EventSource polyfill if needed by the SDK version, 
+    // usually handled by global or constructor options. 
+    // Checking SDK source is hard, so we'll try setting global first or passing as option if available.
+    global.EventSource = EventSource;
+
+    mcpTransport = new SSEClientTransport(new URL(sseUrl), {
+        eventSourceInit: {
+            withCredentials: false
+        }
     });
 
     mcpClient = new Client({
