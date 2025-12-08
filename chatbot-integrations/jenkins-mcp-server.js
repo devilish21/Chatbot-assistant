@@ -54,69 +54,7 @@ async function getBuildStatus(jobName, buildId) {
     return response.data.result || (response.data.building ? "BUILDING" : "UNKNOWN");
 }
 
-async function getBuildLogs(jobName, buildId) {
-    if (!JENKINS_URL) throw new Error("Jenkins URL not configured");
-    const response = await axios.get(`${JENKINS_URL}/job/${jobName}/${buildId}/consoleText`, { headers: authHeader });
-    return response.data;
-}
 
-// Enterprise Feature: Get Job Info (with params)
-async function getJobInfo(jobName) {
-    if (!JENKINS_URL) throw new Error("Jenkins URL not configured");
-    const response = await axios.get(`${JENKINS_URL}/job/${jobName}/api/json`, { headers: authHeader });
-    return response.data;
-}
-
-// Enterprise Feature: Search Build Logs
-async function searchBuildLogs(jobName, buildId, queries) {
-    const logText = await getBuildLogs(jobName, buildId);
-    if (typeof logText !== 'string') return "Logs not available via text.";
-
-    const lines = logText.split('\n');
-    const matches = [];
-
-    // Simple verification of queries
-    const searchTerms = Array.isArray(queries) ? queries : [queries];
-
-    lines.forEach((line, index) => {
-        for (const term of searchTerms) {
-            if (line.toLowerCase().includes(term.toLowerCase())) {
-                matches.push(`Line ${index + 1}: ${line.trim()}`);
-            }
-        }
-    });
-
-    return matches.length > 0 ? matches.join('\n') : "No matches found.";
-}
-
-// Enterprise Feature: Diagnose Build
-async function diagnoseBuild(jobName, buildId) {
-    const status = await getBuildStatus(jobName, buildId);
-    const logs = await getBuildLogs(jobName, buildId);
-
-    // Quick heuristic analysis
-    let failureReason = "Unknown";
-    if (typeof logs === 'string') {
-        const lowerLogs = logs.toLowerCase();
-        if (lowerLogs.includes("timeout")) failureReason = "Timeout";
-        else if (lowerLogs.includes("failed to resolve")) failureReason = "Dependency Resolution Failure";
-        else if (lowerLogs.includes("compilation error")) failureReason = "Compilation Error";
-        else if (lowerLogs.includes("test failed")) failureReason = "Test Failure";
-        else if (lowerLogs.includes("unauthorized")) failureReason = "Authentication/Authorization Failure";
-    }
-
-    // Get last 50 lines for context
-    const logLines = typeof logs === 'string' ? logs.split('\n') : [];
-    const tailLogs = logLines.slice(-50).join('\n');
-
-    return {
-        jobName,
-        buildId,
-        status,
-        potentialCause: failureReason,
-        recentLogs: tailLogs
-    };
-}
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
@@ -145,41 +83,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             {
                 name: "get_build_status",
                 description: "Get the status (SUCCESS, FAILURE, etc.) of a specific build",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        jobName: { type: "string" },
-                        buildId: { type: "string" }
-                    },
-                    required: ["jobName", "buildId"]
-                }
-            {
-                name: "get_job_info",
-                description: "Get detailed information about a job, including available parameters.",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        jobName: { type: "string" }
-                    },
-                    required: ["jobName"]
-                }
-            },
-            {
-                name: "search_build_logs",
-                description: "Search for specific terms in the build logs (e.g., 'Error', 'Exception').",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        jobName: { type: "string" },
-                        buildId: { type: "string" },
-                        query: { type: "string", description: "Term to search for" }
-                    },
-                    required: ["jobName", "buildId", "query"]
-                }
-            },
-            {
-                name: "diagnose_build",
-                description: "Smart diagnosis of a build failure. Returns status, potential cause, and recent logs.",
                 inputSchema: {
                     type: "object",
                     properties: {
@@ -231,30 +134,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                         }
                     ]
                 }
-            }
-            case "get_job_info": {
-                const jobName = String(request.params.arguments?.jobName);
-                const info = await getJobInfo(jobName);
-                return {
-                    content: [{ type: "text", text: JSON.stringify(info, null, 2) }]
-                };
-            }
-            case "search_build_logs": {
-                const jobName = String(request.params.arguments?.jobName);
-                const buildId = String(request.params.arguments?.buildId);
-                const query = String(request.params.arguments?.query);
-                const results = await searchBuildLogs(jobName, buildId, query);
-                return {
-                    content: [{ type: "text", text: results }]
-                };
-            }
-            case "diagnose_build": {
-                const jobName = String(request.params.arguments?.jobName);
-                const buildId = String(request.params.arguments?.buildId);
-                const diagnosis = await diagnoseBuild(jobName, buildId);
-                return {
-                    content: [{ type: "text", text: JSON.stringify(diagnosis, null, 2) }]
-                };
             }
             default:
                 throw new Error("Unknown tool");

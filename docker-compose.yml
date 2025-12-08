@@ -32,18 +32,6 @@ services:
       timeout: 10s
       retries: 3
 
-  jenkins-mcp-enterprise:
-    build:
-      context: ./chatbot-integrations/jenkins-mcp-enterprise
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    restart: unless-stopped
-    networks:
-      - app-network
-    depends_on:
-      - jenkins
-
   jenkins:
     image: jenkins/jenkins:jdk21
     ports:
