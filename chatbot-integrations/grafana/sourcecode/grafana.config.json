@@ -1,9 +1,0 @@
-{
-    "instances": [
-        {
-            "name": "grafana-prod",
-            "baseUrl": "https://grafana.company.com",
-            "apiToken": "XXXX"
-        }
-    ]
-}

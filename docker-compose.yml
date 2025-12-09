@@ -15,139 +15,37 @@ services:
 
   mcp-server:
     build:
-      context: ./chatbot-integrations
+      context: ./chatbot-integrations/unified-mcp
       dockerfile: Dockerfile
     ports:
       - "3009:3009"
-    env_file:
-      - ./chatbot-integrations/.env
     environment:
       - PORT=3009
-    restart: unless-stopped
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3009/tools || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  jira-mcp-restricted:
-    build:
-      context: ./chatbot-integrations/jira/sourcecode
-      dockerfile: Dockerfile
-    ports:
-      - "3898:3898"
+      # Jenkins Config
+      - JENKINS_URL=http://jenkins:8080
+      - JENKINS_USER=admin
+      - JENKINS_TOKEN=admin
+      # MCP Config Paths
+      - JIRA_CONFIG_PATH=/app/config/jira.config.json
+      - SONAR_CONFIG_PATH=/app/config/sonarqube.config.json
+      - NEXUS_CONFIG_PATH=/app/config/nexus.config.json
+      - BITBUCKET_CONFIG_PATH=/app/config/bitbucket.config.json
+      - ELASTIC_CONFIG_PATH=/app/config/elasticsearch.config.json
+      - GRAFANA_CONFIG_PATH=/app/config/grafana.config.json
     volumes:
-      - ./chatbot-integrations/jira/sourcecode/jira.config.json:/app/jira.config.json:ro
-    environment:
-      - PORT=3898
-      - JIRA_CONFIG_PATH=/app/jira.config.json
+      - ./chatbot-integrations/jira/sourcecode/jira.config.json:/app/config/jira.config.json:ro
+      - ./chatbot-integrations/sonarqube/sourcecode/sonarqube.config.json:/app/config/sonarqube.config.json:ro
+      - ./chatbot-integrations/nexus/sourcecode/nexus.config.json:/app/config/nexus.config.json:ro
+      - ./chatbot-integrations/bitbucket/sourcecode/bitbucket.config.json:/app/config/bitbucket.config.json:ro
+      - ./chatbot-integrations/elasticsearch/sourcecode/elasticsearch.config.json:/app/config/elasticsearch.config.json:ro
+      - ./chatbot-integrations/grafana/sourcecode/grafana.config.json:/app/config/grafana.config.json:ro
     restart: always
     networks:
       - app-network
+    depends_on:
+      - jenkins
     healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3898/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  sonarqube-mcp:
-    build:
-      context: ./chatbot-integrations/sonarqube/sourcecode
-      dockerfile: Dockerfile
-    ports:
-      - "3899:3899"
-    volumes:
-      - ./chatbot-integrations/sonarqube/sourcecode/sonarqube.config.json:/app/sonarqube.config.json:ro
-    environment:
-      - PORT=3899
-      - SONAR_CONFIG_PATH=/app/sonarqube.config.json
-    restart: always
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3899/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  nexus-mcp:
-    build:
-      context: ./chatbot-integrations/nexus/sourcecode
-      dockerfile: Dockerfile
-    ports:
-      - "3900:3900"
-    volumes:
-      - ./chatbot-integrations/nexus/sourcecode/nexus.config.json:/app/nexus.config.json:ro
-    environment:
-      - PORT=3900
-      - NEXUS_CONFIG_PATH=/app/nexus.config.json
-    restart: always
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3900/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  bitbucket-mcp:
-    build:
-      context: ./chatbot-integrations/bitbucket/sourcecode
-      dockerfile: Dockerfile
-    ports:
-      - "3901:3901"
-    volumes:
-      - ./chatbot-integrations/bitbucket/sourcecode/bitbucket.config.json:/app/bitbucket.config.json:ro
-    environment:
-      - PORT=3901
-      - BITBUCKET_CONFIG_PATH=/app/bitbucket.config.json
-    restart: always
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3901/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  elasticsearch-mcp:
-    build:
-      context: ./chatbot-integrations/elasticsearch/sourcecode
-      dockerfile: Dockerfile
-    ports:
-      - "3902:3902"
-    volumes:
-      - ./chatbot-integrations/elasticsearch/sourcecode/elasticsearch.config.json:/app/elasticsearch.config.json:ro
-    environment:
-      - PORT=3902
-      - ELASTIC_CONFIG_PATH=/app/elasticsearch.config.json
-    restart: always
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3902/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  grafana-mcp:
-    build:
-      context: ./chatbot-integrations/grafana/sourcecode
-      dockerfile: Dockerfile
-    ports:
-      - "3903:3903"
-    volumes:
-      - ./chatbot-integrations/grafana/sourcecode/grafana.config.json:/app/grafana.config.json:ro
-    environment:
-      - PORT=3903
-      - GRAFANA_CONFIG_PATH=/app/grafana.config.json
-    restart: always
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3903/health || exit 1" ]
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3009/health || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
