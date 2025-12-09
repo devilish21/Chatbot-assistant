@@ -48,7 +48,15 @@ const App: React.FC = () => {
     if (savedConfig) {
       try {
         // We merge saved config with DEFAULT_CONFIG to ensure new keys in constants.ts are picked up
-        setConfig(prev => ({ ...prev, ...JSON.parse(savedConfig) }));
+        const parsed = JSON.parse(savedConfig);
+
+        // AUTO-MIGRATION: Fix endpoint if it was set to the proxy '/ollama'
+        // We are reverting to direct localhost access as that is known to work for this user
+        if (parsed.endpoint === '/ollama') {
+          parsed.endpoint = 'http://localhost:11434';
+        }
+
+        setConfig(prev => ({ ...prev, ...parsed }));
       } catch (e) { console.error("Config parse error", e); }
     }
 

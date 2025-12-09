@@ -2,7 +2,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { metricsService, SystemMetrics, LLMRequestMetric, ToolUsageMetric } from '../services/metricsService';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, LineChart, Line, CartesianGrid } from 'recharts';
+<<<<<<< HEAD
 import { ArrowLeft, Activity, Database, AlertCircle, CheckCircle, Smartphone, Download, Upload, X, Clock, Lock, ShieldCheck, ChevronRight } from 'lucide-react';
+=======
+import { ArrowLeft, Activity, Database, AlertCircle, CheckCircle, Smartphone, Download, Upload, X, Clock } from 'lucide-react';
+>>>>>>> 1f28ba6 (feat: add new feature descriptions to the user manual's overview and features tabs)
 import clsx from 'clsx';
 
 interface AdminDashboardProps {
@@ -11,9 +15,12 @@ interface AdminDashboardProps {
 
 type ActivityItem = (LLMRequestMetric | ToolUsageMetric) & { type: 'LLM' | 'TOOL', name: string };
 
+<<<<<<< HEAD
 const ADMIN_PIN = 'admin'; // In a real app, this would be backend-validated or configurable
 const AUTH_SESSION_KEY = 'admin_dashboard_auth';
 
+=======
+>>>>>>> 1f28ba6 (feat: add new feature descriptions to the user manual's overview and features tabs)
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     // Auth State
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -39,6 +46,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     }, [isAuthenticated]);
 
     // --- Actions ---
+<<<<<<< HEAD
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
         if (pinInput === ADMIN_PIN) {
@@ -56,6 +64,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         sessionStorage.removeItem(AUTH_SESSION_KEY);
     };
 
+=======
+>>>>>>> 1f28ba6 (feat: add new feature descriptions to the user manual's overview and features tabs)
     const handleExport = () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(metrics, null, 2));
         const downloadAnchorNode = document.createElement('a');
@@ -95,6 +105,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         event.target.value = ''; // Reset
     };
 
+<<<<<<< HEAD
     // --- Login View ---
     if (!isAuthenticated) {
         return (
@@ -151,6 +162,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     // --- Dashboard View (Authenticated) ---
 
     // Stats Calculation
+=======
+    // --- Stats Calculation ---
+>>>>>>> 1f28ba6 (feat: add new feature descriptions to the user manual's overview and features tabs)
     const totalRequests = metrics.llmRequests.length;
     const successfulRequests = metrics.llmRequests.filter(m => m.success).length;
     const failedRequests = metrics.llmRequests.filter(m => !m.success).length;
@@ -159,7 +173,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     const totalToolCalls = metrics.toolUsage.length;
     const successfulTools = metrics.toolUsage.filter(t => t.success).length;
 
+<<<<<<< HEAD
     // Chart Data
+=======
+    // --- Chart Data ---
+>>>>>>> 1f28ba6 (feat: add new feature descriptions to the user manual's overview and features tabs)
     const pieData = [
         { name: 'Success', value: successfulRequests, color: '#22c55e' },
         { name: 'Failed', value: failedRequests, color: '#ef4444' }
@@ -175,7 +193,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
+<<<<<<< HEAD
     // Latency Data
+=======
+    // Latency Data (Last 20 requests)
+>>>>>>> 1f28ba6 (feat: add new feature descriptions to the user manual's overview and features tabs)
     const latencyData = metrics.llmRequests
         .slice(0, 20)
         .reverse()
@@ -212,12 +234,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                             >
                                 <ArrowLeft className="w-5 h-5" />
                             </button>
+<<<<<<< HEAD
                             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent flex items-center gap-2">
                                 <ShieldCheck className="w-5 h-5 text-blue-500" />
+=======
+                            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
+>>>>>>> 1f28ba6 (feat: add new feature descriptions to the user manual's overview and features tabs)
                                 Advanced System Metrics
                             </h1>
                         </div>
                         <div className="flex items-center space-x-3">
+<<<<<<< HEAD
                             <div className="hidden md:flex items-center space-x-3">
                                 <button
                                     onClick={handleImportClick}
@@ -251,6 +278,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                                 className="text-xs font-medium text-gray-400 hover:text-white transition-colors"
                             >
                                 Logout
+=======
+                            <button
+                                onClick={handleImportClick}
+                                className="flex items-center space-x-2 px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 transition-colors"
+                            >
+                                <Upload className="w-3.5 h-3.5" />
+                                <span>Import</span>
+                            </button>
+                            <button
+                                onClick={handleExport}
+                                className="flex items-center space-x-2 px-3 py-1.5 text-xs font-medium text-blue-300 hover:text-blue-100 bg-blue-900/20 hover:bg-blue-900/40 rounded border border-blue-800/50 transition-colors"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>Export</span>
+                            </button>
+                            <div className="h-4 w-px bg-gray-700 mx-2" />
+                            <button
+                                onClick={() => {
+                                    if (confirm('Are you sure you want to clear all metrics? This cannot be undone.')) {
+                                        metricsService.clearMetrics();
+                                        setMetrics(metricsService.getMetrics());
+                                    }
+                                }}
+                                className="px-3 py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-900/50 hover:bg-red-900/20 rounded transition-colors"
+                            >
+                                Reset
+>>>>>>> 1f28ba6 (feat: add new feature descriptions to the user manual's overview and features tabs)
                             </button>
                         </div>
                     </div>
@@ -398,7 +452,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 font-mono">
                                                 {item.name}
+<<<<<<< HEAD
                                                 <ChevronRight className="inline-block w-3 h-3 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-400" />
+=======
+>>>>>>> 1f28ba6 (feat: add new feature descriptions to the user manual's overview and features tabs)
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                 {item.success ? (
