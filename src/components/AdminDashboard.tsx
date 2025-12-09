@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { metricsService, SystemMetrics, LLMRequestMetric, ToolUsageMetric } from '../services/metricsService';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, LineChart, Line, CartesianGrid } from 'recharts';
-import { ArrowLeft, Activity, Database, AlertCircle, CheckCircle, Smartphone, Download, Upload, X, Clock } from 'lucide-react';
+import { ArrowLeft, Activity, Database, AlertCircle, CheckCircle, Smartphone, Download, Upload, X, Clock, Lock, ShieldCheck, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 
 interface AdminDashboardProps {
@@ -11,19 +11,51 @@ interface AdminDashboardProps {
 
 type ActivityItem = (LLMRequestMetric | ToolUsageMetric) & { type: 'LLM' | 'TOOL', name: string };
 
+const ADMIN_PIN = 'admin'; // In a real app, this would be backend-validated or configurable
+const AUTH_SESSION_KEY = 'admin_dashboard_auth';
+
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
+    // Auth State
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+        return sessionStorage.getItem(AUTH_SESSION_KEY) === 'true';
+    });
+    const [pinInput, setPinInput] = useState('');
+    const [authError, setAuthError] = useState(false);
+
+    // Dashboard State
     const [metrics, setMetrics] = useState<SystemMetrics>(metricsService.getMetrics());
     const [selectedItem, setSelectedItem] = useState<ActivityItem | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            setMetrics(metricsService.getMetrics());
-        }, 2000); // Live update every 2s
+        let interval: ReturnType<typeof setInterval>;
+        if (isAuthenticated) {
+            setMetrics(metricsService.getMetrics()); // Initial fetch
+            interval = setInterval(() => {
+                setMetrics(metricsService.getMetrics());
+            }, 2000); // Live update every 2s
+        }
         return () => clearInterval(interval);
-    }, []);
+    }, [isAuthenticated]);
 
     // --- Actions ---
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (pinInput === ADMIN_PIN) {
+            setIsAuthenticated(true);
+            sessionStorage.setItem(AUTH_SESSION_KEY, 'true');
+            setAuthError(false);
+        } else {
+            setAuthError(true);
+            setPinInput('');
+        }
+    };
+
+    const handleLogout = () => {
+        setIsAuthenticated(false);
+        sessionStorage.removeItem(AUTH_SESSION_KEY);
+    };
+
     const handleExport = () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(metrics, null, 2));
         const downloadAnchorNode = document.createElement('a');
@@ -63,7 +95,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         event.target.value = ''; // Reset
     };
 
-    // --- Stats Calculation ---
+    // --- Login View ---
+    if (!isAuthenticated) {
+        return (
+            <div className="flex flex-col h-screen bg-gray-950 text-gray-100 items-center justify-center p-4 relative overflow-hidden">
+                {/* Background visual elements */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-900/20 rounded-full blur-[100px] pointer-events-none" />
+
+                <div className="w-full max-w-md bg-gray-900/80 border border-gray-800 rounded-2xl p-8 backdrop-blur-xl shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="flex flex-col items-center text-center mb-8">
+                        <div className="w-16 h-16 bg-blue-900/30 rounded-2xl flex items-center justify-center mb-4 border border-blue-800/50 shadow-inner">
+                            <Lock className="w-8 h-8 text-blue-400" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-white tracking-tight">Restricted Access</h1>
+                        <p className="text-gray-400 mt-2 text-sm">System Admin Privileges Required</p>
+                    </div>
+
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider pl-1">Security PIN</label>
+                            <input
+                                type="password"
+                                autoFocus
+                                value={pinInput}
+                                onChange={(e) => { setPinInput(e.target.value); setAuthError(false); }}
+                                className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-3 text-lg text-center tracking-[0.5em] text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all placeholder:tracking-normal"
+                                placeholder="••••"
+                            />
+                        </div>
+
+                        {authError && (
+                            <div className="text-red-400 text-xs text-center font-medium animate-pulse flex items-center justify-center gap-1.5">
+                                <AlertCircle className="w-3 h-3" />
+                                Invalid Access PIN
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 rounded-lg shadow-lg hover:shadow-blue-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            <ShieldCheck className="w-4 h-4" />
+                            Authenticate
+                        </button>
+                    </form>
+
+                    <button onClick={onClose} className="w-full mt-4 text-gray-500 hover:text-gray-300 text-sm py-2 transition-colors">
+                        Return to Console
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // --- Dashboard View (Authenticated) ---
+
+    // Stats Calculation
     const totalRequests = metrics.llmRequests.length;
     const successfulRequests = metrics.llmRequests.filter(m => m.success).length;
     const failedRequests = metrics.llmRequests.filter(m => !m.success).length;
@@ -72,7 +159,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     const totalToolCalls = metrics.toolUsage.length;
     const successfulTools = metrics.toolUsage.filter(t => t.success).length;
 
-    // --- Chart Data ---
+    // Chart Data
     const pieData = [
         { name: 'Success', value: successfulRequests, color: '#22c55e' },
         { name: 'Failed', value: failedRequests, color: '#ef4444' }
@@ -88,7 +175,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-    // Latency Data (Last 20 requests)
+    // Latency Data
     const latencyData = metrics.llmRequests
         .slice(0, 20)
         .reverse()
@@ -125,36 +212,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                             >
                                 <ArrowLeft className="w-5 h-5" />
                             </button>
-                            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
+                            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent flex items-center gap-2">
+                                <ShieldCheck className="w-5 h-5 text-blue-500" />
                                 Advanced System Metrics
                             </h1>
                         </div>
                         <div className="flex items-center space-x-3">
-                            <button
-                                onClick={handleImportClick}
-                                className="flex items-center space-x-2 px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 transition-colors"
-                            >
-                                <Upload className="w-3.5 h-3.5" />
-                                <span>Import</span>
-                            </button>
-                            <button
-                                onClick={handleExport}
-                                className="flex items-center space-x-2 px-3 py-1.5 text-xs font-medium text-blue-300 hover:text-blue-100 bg-blue-900/20 hover:bg-blue-900/40 rounded border border-blue-800/50 transition-colors"
-                            >
-                                <Download className="w-3.5 h-3.5" />
-                                <span>Export</span>
-                            </button>
+                            <div className="hidden md:flex items-center space-x-3">
+                                <button
+                                    onClick={handleImportClick}
+                                    className="flex items-center space-x-2 px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 transition-colors"
+                                >
+                                    <Upload className="w-3.5 h-3.5" />
+                                    <span>Import</span>
+                                </button>
+                                <button
+                                    onClick={handleExport}
+                                    className="flex items-center space-x-2 px-3 py-1.5 text-xs font-medium text-blue-300 hover:text-blue-100 bg-blue-900/20 hover:bg-blue-900/40 rounded border border-blue-800/50 transition-colors"
+                                >
+                                    <Download className="w-3.5 h-3.5" />
+                                    <span>Export</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (confirm('Are you sure you want to clear all metrics? This cannot be undone.')) {
+                                            metricsService.clearMetrics();
+                                            setMetrics(metricsService.getMetrics());
+                                        }
+                                    }}
+                                    className="px-3 py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-900/50 hover:bg-red-900/20 rounded transition-colors"
+                                >
+                                    Reset
+                                </button>
+                            </div>
                             <div className="h-4 w-px bg-gray-700 mx-2" />
                             <button
-                                onClick={() => {
-                                    if (confirm('Are you sure you want to clear all metrics? This cannot be undone.')) {
-                                        metricsService.clearMetrics();
-                                        setMetrics(metricsService.getMetrics());
-                                    }
-                                }}
-                                className="px-3 py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-900/50 hover:bg-red-900/20 rounded transition-colors"
+                                onClick={handleLogout}
+                                className="text-xs font-medium text-gray-400 hover:text-white transition-colors"
                             >
-                                Reset
+                                Logout
                             </button>
                         </div>
                     </div>
@@ -302,6 +398,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 font-mono">
                                                 {item.name}
+                                                <ChevronRight className="inline-block w-3 h-3 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-blue-400" />
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                 {item.success ? (

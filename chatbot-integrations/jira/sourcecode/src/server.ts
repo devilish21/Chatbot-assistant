@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -26,7 +26,7 @@ async function main() {
         return { tools: toolsManager.getToolDefinitions() };
     });
 
-    mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+    mcpServer.setRequestHandler(CallToolRequestSchema, async (request: any) => {
         try {
             return await toolsManager.handleToolCall(request.params.name, request.params.arguments);
         } catch (error: any) {
@@ -47,12 +47,12 @@ async function main() {
     // SSE Transport Logic
     let transport: SSEServerTransport;
 
-    app.get('/sse', async (req, res) => {
+    app.get('/sse', async (req: Request, res: Response) => {
         transport = new SSEServerTransport('/messages', res);
         await mcpServer.connect(transport);
     });
 
-    app.post('/messages', async (req, res) => {
+    app.post('/messages', async (req: Request, res: Response) => {
         if (transport) {
             await transport.handlePostMessage(req, res);
         } else {
@@ -61,7 +61,7 @@ async function main() {
     });
 
     // REST Compatibility Endpoints (for existing Frontend)
-    app.get('/tools', async (req, res) => {
+    app.get('/tools', async (req: Request, res: Response) => {
         try {
             const tools = toolsManager.getToolDefinitions();
             res.json({ tools });
@@ -70,7 +70,7 @@ async function main() {
         }
     });
 
-    app.post('/call-tool', async (req, res) => {
+    app.post('/call-tool', async (req: Request, res: Response) => {
         const { name, arguments: args } = req.body;
         if (!name) return res.status(400).json({ error: "Tool name required" });
 
@@ -83,13 +83,13 @@ async function main() {
         }
     });
 
-    app.get('/health', (req, res) => {
-        res.json({ status: 'ok', instances: config.instances.map(i => i.name) });
+    app.get('/health', (req: Request, res: Response) => {
+        res.json({ status: 'ok', instances: config.instances.map((i: any) => i.name) });
     });
 
     app.listen(PORT, () => {
         console.log(`Jira MCP Restricted Server running on port ${PORT}`);
-        console.log(`Configured instances: ${config.instances.map(i => i.name).join(', ')}`);
+        console.log(`Configured instances: ${config.instances.map((i: any) => i.name).join(', ')}`);
     });
 }
 
