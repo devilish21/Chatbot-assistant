@@ -33,12 +33,12 @@ services:
       - ELASTIC_CONFIG_PATH=/app/config/elasticsearch.config.json
       - GRAFANA_CONFIG_PATH=/app/config/grafana.config.json
     volumes:
-      - ./chatbot-integrations/jira/sourcecode/jira.config.json:/app/config/jira.config.json:ro
-      - ./chatbot-integrations/sonarqube/sourcecode/sonarqube.config.json:/app/config/sonarqube.config.json:ro
-      - ./chatbot-integrations/nexus/sourcecode/nexus.config.json:/app/config/nexus.config.json:ro
-      - ./chatbot-integrations/bitbucket/sourcecode/bitbucket.config.json:/app/config/bitbucket.config.json:ro
-      - ./chatbot-integrations/elasticsearch/sourcecode/elasticsearch.config.json:/app/config/elasticsearch.config.json:ro
-      - ./chatbot-integrations/grafana/sourcecode/grafana.config.json:/app/config/grafana.config.json:ro
+      - ./chatbot-integrations/unified-mcp/config/jira.config.json:/app/config/jira.config.json:ro
+      - ./chatbot-integrations/unified-mcp/config/sonarqube.config.json:/app/config/sonarqube.config.json:ro
+      - ./chatbot-integrations/unified-mcp/config/nexus.config.json:/app/config/nexus.config.json:ro
+      - ./chatbot-integrations/unified-mcp/config/bitbucket.config.json:/app/config/bitbucket.config.json:ro
+      - ./chatbot-integrations/unified-mcp/config/elasticsearch.config.json:/app/config/elasticsearch.config.json:ro
+      - ./chatbot-integrations/unified-mcp/config/grafana.config.json:/app/config/grafana.config.json:ro
     restart: always
     networks:
       - app-network

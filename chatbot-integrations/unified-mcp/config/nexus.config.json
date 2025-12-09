@@ -1,0 +1,13 @@
+{
+    "nexus_url": "https://nexus.example.com",
+    "username": "admin",
+    "password": "password",
+    "instances": [
+        {
+            "name": "Production Nexus",
+            "url": "https://nexus.prod.example.com",
+            "username": "admin",
+            "password": "prod-password"
+        }
+    ]
+}

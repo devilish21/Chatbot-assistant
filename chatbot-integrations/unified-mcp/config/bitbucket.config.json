@@ -1,0 +1,13 @@
+{
+    "bitbucket_url": "https://bitbucket.example.com",
+    "username": "admin",
+    "app_password": "password",
+    "instances": [
+        {
+            "name": "Production Bitbucket",
+            "url": "https://bitbucket.prod.example.com",
+            "username": "admin",
+            "app_password": "prod-password"
+        }
+    ]
+}

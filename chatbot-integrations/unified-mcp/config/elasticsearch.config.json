@@ -1,0 +1,9 @@
+{
+    "elasticsearch_url": "http://elasticsearch:9200",
+    "instances": [
+        {
+            "name": "Production Elastic",
+            "url": "http://elastic.prod.example.com"
+        }
+    ]
+}
