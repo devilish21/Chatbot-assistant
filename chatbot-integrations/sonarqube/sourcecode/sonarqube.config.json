@@ -1,0 +1,10 @@
+{
+    "instances": [
+        {
+            "name": "sonar-prod",
+            "baseUrl": "https://sonarqube.company.com",
+            "username": "admin",
+            "apiToken": "XXXX"
+        }
+    ]
+}

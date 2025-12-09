@@ -1,0 +1,10 @@
+{
+    "instances": [
+        {
+            "name": "elk-prod",
+            "node": "https://elasticsearch.company.com",
+            "username": "elastic",
+            "apiToken": "XXXX"
+        }
+    ]
+}
