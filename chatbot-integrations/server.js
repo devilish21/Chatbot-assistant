@@ -21,9 +21,9 @@ let mcpTransport = null;
 async function initMcpClient() {
     if (mcpClient) return mcpClient;
 
-    // Use the local Jenkins MCP implementation
-    const serverCommand = process.env.MCP_SERVER_COMMAND || "node";
-    const serverArgs = process.env.MCP_SERVER_ARGS ? process.env.MCP_SERVER_ARGS.split(' ') : ["./jenkins-mcp-server.js"];
+    // Use the Jenkins MCP Enterprise (Python)
+    const serverCommand = process.env.MCP_SERVER_COMMAND || "/app/venv/bin/python3";
+    const serverArgs = process.env.MCP_SERVER_ARGS ? process.env.MCP_SERVER_ARGS.split(' ') : ["-m", "jenkins_mcp_enterprise"];
 
     console.log(`Connecting to MCP Server: ${serverCommand} ${serverArgs.join(' ')}`);
     console.log("Environment check - JENKINS_URL:", process.env.JENKINS_URL ? "Set" : "Missing");
