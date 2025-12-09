@@ -98,6 +98,14 @@ const App: React.FC = () => {
     localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
   }, [config]);
 
+  // 2.5 Auto-Repair: Fix broken '/ollama' endpoint from previous versions
+  useEffect(() => {
+    if (config.endpoint === '/ollama') {
+      console.log("Auto-repairing endpoint: /ollama -> http://localhost:11434");
+      setConfig(prev => ({ ...prev, endpoint: 'http://localhost:11434' }));
+    }
+  }, [config.endpoint]);
+
   // 3. Matrix Rain Animation Effect (Only if enabled in config)
   useEffect(() => {
     // If Visual Effects are disabled, do not run the canvas loop
@@ -250,8 +258,8 @@ const App: React.FC = () => {
         {/* GLOBAL SYSTEM ALERT BANNER */}
         {config.systemAlert && (
           <div className={`w-full px-4 py-2 flex items-center justify-center gap-3 text-xs font-bold uppercase tracking-wider animate-in slide-in-from-top z-50 ${isTerminalMode
-              ? 'bg-red-900/80 text-white border-b border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]'
-              : 'bg-yellow-400 text-stc-purple-dark border-b border-yellow-500'
+            ? 'bg-red-900/80 text-white border-b border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]'
+            : 'bg-yellow-400 text-stc-purple-dark border-b border-yellow-500'
             }`}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
             <span>{config.systemAlert}</span>
