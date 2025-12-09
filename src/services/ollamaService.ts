@@ -1,6 +1,7 @@
 
 import { AppConfig, Message } from "../types";
 import { mcpService, Tool } from "./mcpService";
+import { metricsService } from "./metricsService";
 
 export const validateEndpoint = async (url: string): Promise<boolean> => {
     try {
@@ -58,6 +59,7 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
         turn++;
         let currentResponseContent = "";
         let toolCalls: any[] = [];
+        const startTime = Date.now();
 
         try {
             const body = {
@@ -163,12 +165,27 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                     try {
                         const result = await mcpService.callTool(functionName, functionArgs);
 
+                        metricsService.trackToolUsage({
+                            toolName: functionName,
+                            service: 'unknown',
+                            success: true,
+                            args: functionArgs
+                        });
+
                         // Add result to history
                         conversationHistory.push({
                             role: 'tool',
                             content: JSON.stringify(result)
                         });
                     } catch (err: any) {
+                        metricsService.trackToolUsage({
+                            toolName: functionName,
+                            service: 'unknown',
+                            success: false,
+                            args: functionArgs,
+                            error: err.message
+                        });
+
                         conversationHistory.push({
                             role: 'tool',
                             content: `Error executing tool: ${err.message}`
@@ -178,11 +195,30 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                 // Loop continues to next turn to generate response based on tool results
             } else {
                 // No tools called, we are done
+                metricsService.trackLLMRequest({
+                    model: config.model || 'llama3',
+                    success: true,
+                    durationMs: Date.now() - startTime
+                });
                 return;
             }
 
+            // Also track success if tools were called
+            metricsService.trackLLMRequest({
+                model: config.model || 'llama3',
+                success: true,
+                durationMs: Date.now() - startTime
+            });
+
         } catch (error: any) {
             console.error("Ollama Service Error:", error);
+
+            metricsService.trackLLMRequest({
+                model: config.model || 'llama3',
+                success: false,
+                error: error.message
+            });
+
             if (error.message.includes('Failed to fetch') || error.message.includes('ECONNREFUSED')) {
                 throw new Error("Could not connect to Ollama. Make sure 'ollama serve' is running.");
             }

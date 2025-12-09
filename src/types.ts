@@ -2,7 +2,7 @@
 
 export interface AppConfig {
   endpoint: string;
-  model: string; 
+  model: string;
   temperature: number;
   systemInstruction: string;
   enableSuggestions: boolean;
@@ -45,22 +45,46 @@ export interface SlashCommand {
 }
 
 export interface CommandPaletteAction {
-    id: string;
-    title: string;
-    shortcut?: string[];
-    action: () => void;
+  id: string;
+  title: string;
+  shortcut?: string[];
+  action: () => void;
 }
 
 export interface Snippet {
-    id: string;
-    title: string;
-    content: string;
+  id: string;
+  title: string;
+  content: string;
+}
+
+export interface LLMRequestMetric {
+  id: string;
+  timestamp: number;
+  model: string;
+  success: boolean;
+  durationMs?: number;
+  error?: string;
+}
+
+export interface ToolUsageMetric {
+  id: string;
+  timestamp: number;
+  toolName: string;
+  service: string;
+  success: boolean;
+  args?: any;
+  error?: string;
+}
+
+export interface SystemMetrics {
+  llmRequests: LLMRequestMetric[];
+  toolUsage: ToolUsageMetric[];
 }
 
 export type ToastType = 'info' | 'success' | 'error';
 
 export interface Toast {
-    id: string;
-    message: string;
-    type: ToastType;
+  id: string;
+  message: string;
+  type: ToastType;
 }

@@ -1,232 +1,227 @@
 
 import React, { useState } from 'react';
+import { X, Search, Terminal, Book, Cpu, Shield, Activity, GitBranch, Database, FileText } from 'lucide-react';
 
 interface UserManualProps {
-  isOpen: boolean;
-  onClose: () => void;
-  isTerminalMode: boolean;
+    isOpen: boolean;
+    onClose: () => void;
+    isTerminalMode: boolean;
 }
 
 export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTerminalMode }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'commands' | 'modes'>('overview');
+    const [activeSection, setActiveSection] = useState('overview');
+    const [searchQuery, setSearchQuery] = useState('');
 
-  if (!isOpen) return null;
+    if (!isOpen) return null;
 
-  const containerClass = isTerminalMode 
-    ? "bg-black border border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.2)] text-green-500 font-mono" 
-    : "bg-white border border-stc-purple/20 shadow-2xl text-stc-purple font-sans";
+    const sections = [
+        { id: 'overview', label: 'System Overview', icon: <Activity className="w-4 h-4" /> },
+        { id: 'interface', label: 'Interface & Modes', icon: <Terminal className="w-4 h-4" /> },
+        { id: 'devops-suite', label: 'DevOps Suite (MCP)', icon: <Cpu className="w-4 h-4" /> },
+        { id: 'admin', label: 'Admin & Security', icon: <Shield className="w-4 h-4" /> },
+        { id: 'commands', label: 'Command Reference', icon: <Book className="w-4 h-4" /> },
+    ];
 
-  const tabClass = (tab: string) => {
-    const isActive = activeTab === tab;
-    if (isTerminalMode) {
-        return `px-4 py-2 text-xs font-bold border-b-2 transition-colors ${isActive ? 'border-green-500 text-green-400 bg-green-900/20' : 'border-transparent text-green-700 hover:text-green-500'}`;
-    }
-    return `px-4 py-2 text-xs font-bold border-b-2 transition-colors ${isActive ? 'border-stc-coral text-stc-purple bg-stc-purple/5' : 'border-transparent text-gray-400 hover:text-stc-purple'}`;
-  };
+    const renderContent = () => {
+        switch (activeSection) {
+            case 'overview':
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                        <div className="prose prose-invert max-w-none">
+                            <h2 className="text-2xl font-bold text-gray-100 mb-4">DevOps Omni-Assistant</h2>
+                            <p className="text-gray-300 leading-relaxed">
+                                Welcome to the most advanced local DevOps assistant. This system integrates a local Large Language Model (LLM) with a suite of real-world DevOps tools via the Model Context Protocol (MCP).
+                            </p>
 
-  return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
-      <div 
-        className={`w-full max-w-4xl h-[80vh] flex flex-col rounded-xl overflow-hidden relative ${containerClass}`}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className={`flex items-center justify-between px-6 py-4 border-b ${isTerminalMode ? 'border-green-500/50 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
-            <div className="flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-                <h2 className="text-lg font-bold tracking-wider">DEVOPS CHATBOT MANUAL v2.5</h2>
-            </div>
-            <button onClick={onClose} className="hover:opacity-70 transition-opacity">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-        </div>
-
-        {/* Tabs */}
-        <div className={`flex px-6 border-b ${isTerminalMode ? 'border-green-500/30' : 'border-stc-purple/10'}`}>
-            <button onClick={() => setActiveTab('overview')} className={tabClass('overview')}>OVERVIEW</button>
-            <button onClick={() => setActiveTab('features')} className={tabClass('features')}>SYSTEM FEATURES</button>
-            <button onClick={() => setActiveTab('commands')} className={tabClass('commands')}>COMMANDS</button>
-            <button onClick={() => setActiveTab('modes')} className={tabClass('modes')}>VISUAL MODES</button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            
-            {/* TAB: OVERVIEW */}
-            {activeTab === 'overview' && (
-                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
-                    <div className="text-center space-y-4 max-w-2xl mx-auto">
-                        <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center border-2 ${isTerminalMode ? 'border-green-500 bg-black text-green-500' : 'border-stc-purple bg-stc-purple text-white'}`}>
-                             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
-                        </div>
-                        <h1 className="text-2xl font-bold">DevOps Omni-Assistant</h1>
-                        <p className="opacity-80 leading-relaxed">
-                            An advanced interface bridging conversational AI with technical execution. 
-                            Designed for SREs and Platform Engineers to debug infrastructure, 
-                            audit security, and generate code with high precision.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                        <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
-                            <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                Admin Control
-                            </h3>
-                            <p className="text-xs opacity-70">Secure configuration hub to manage token limits, context windows, and system personas via the <code>/admin</code> command.</p>
-                        </div>
-                        <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
-                            <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                                Prompt Library
-                            </h3>
-                            <p className="text-xs opacity-70">Save, organize, and instantly inject complex engineering prompts or reusable code snippets.</p>
-                        </div>
-                        <div className={`p-4 rounded border ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-stc-purple/10 bg-stc-light'}`}>
-                            <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                                Log Analysis
-                            </h3>
-                            <p className="text-xs opacity-70">Drag & drop .log, .json, or .yaml files directly into the chat for instant root cause analysis.</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* TAB: FEATURES */}
-            {activeTab === 'features' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4 duration-300">
-                    
-                    {/* Admin Console */}
-                    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm">Admin Console</h3>
-                            <kbd className={`px-1.5 py-0.5 rounded text-[10px] border ${isTerminalMode ? 'border-green-500' : 'border-stc-purple/30'}`}>/admin</kbd>
-                        </div>
-                        <p className="text-xs opacity-70 leading-relaxed">
-                            A restricted area to fine-tune the LLM. Adjust the <strong>Max Output Tokens</strong> (response length) and <strong>Context Window Size</strong> (memory capacity) to optimize for performance or depth.
-                        </p>
-                    </div>
-
-                    {/* Prompt Library */}
-                    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm">Snippet Repository</h3>
-                            <div className={`w-5 h-5 flex items-center justify-center rounded border ${isTerminalMode ? 'border-green-500' : 'border-stc-purple/30'}`}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg>
-                            </div>
-                        </div>
-                        <p className="text-xs opacity-70 leading-relaxed">
-                            Access the library via the Book icon. Save frequently used prompt templates or code blocks. Inject them into the chat with a single click.
-                        </p>
-                    </div>
-
-                    {/* Internal Tools */}
-                    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm">Infrastructure Hub</h3>
-                            <span className="text-[10px] font-mono opacity-50">RIGHT_RAIL</span>
-                        </div>
-                        <p className="text-xs opacity-70 leading-relaxed">
-                            Navigate internal services (Jenkins, Nexus, SonarQube) via the right sidebar. Expand services to see specific instances and URLs.
-                        </p>
-                    </div>
-
-                    {/* Zen Mode */}
-                    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm">Zen Mode</h3>
-                            <span className="text-[10px] font-mono opacity-50">HEADER_BTN</span>
-                        </div>
-                        <p className="text-xs opacity-70 leading-relaxed">
-                            Toggle "Zen Mode" in the header to collapse all sidebars and focus purely on the chat interface and code generation.
-                        </p>
-                    </div>
-
-                    {/* Session Management */}
-                    <div className={`p-5 rounded-lg border flex flex-col gap-3 ${isTerminalMode ? 'border-green-500/50 bg-black' : 'border-stc-purple/20 bg-stc-light'}`}>
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm">Session History</h3>
-                            <span className="text-[10px] font-mono opacity-50">LEFT_RAIL</span>
-                        </div>
-                        <p className="text-xs opacity-70 leading-relaxed">
-                            Rename sessions by hovering and clicking the Pencil icon. Delete old logs with the Trash icon. History is persisted locally.
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {/* TAB: COMMANDS */}
-            {activeTab === 'commands' && (
-                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
-                    <p className="text-sm opacity-80">
-                        Type <code className={`px-1.5 py-0.5 rounded font-bold ${isTerminalMode ? 'bg-green-900 text-green-400' : 'bg-stc-purple text-white'}`}>/</code> in the input box to access quick templates.
-                    </p>
-
-                    <div className="grid gap-4">
-                        {[
-                            { cmd: '/admin', desc: 'System Administration', detail: 'Login to configure token limits, context size, and system prompts.' },
-                            { cmd: '/audit', desc: 'Security Audit', detail: 'Past code snippets to get a breakdown of vulnerabilities.' },
-                            { cmd: '/docker', desc: 'Generate Dockerfile', detail: 'Creates production-ready, multi-stage Dockerfiles.' },
-                            { cmd: '/k8s', desc: 'Kubernetes Manifests', detail: 'Generates Deployment, Service, and Ingress YAMLs.' },
-                            { cmd: '/ci', desc: 'Pipeline Generation', detail: 'Scaffolds GitHub Actions or Jenkinsfiles.' },
-                            { cmd: '/regex', desc: 'Regex Helper', detail: 'Explains or generates complex regular expressions.' },
-                            { cmd: '/explain', desc: 'Code Explanation', detail: 'Breaks down complex logs or code into simple terms.' },
-                        ].map((item, i) => (
-                            <div key={i} className={`flex items-center p-3 rounded border ${isTerminalMode ? 'border-green-500/30 hover:bg-green-900/20' : 'border-stc-purple/10 hover:bg-stc-light'}`}>
-                                <div className={`w-24 font-mono font-bold ${isTerminalMode ? 'text-green-400' : 'text-stc-coral'}`}>{item.cmd}</div>
-                                <div className="flex-1">
-                                    <div className="font-bold text-sm">{item.desc}</div>
-                                    <div className="text-xs opacity-60">{item.detail}</div>
+                            <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                                    <h3 className="font-semibold text-blue-400 mb-2 flex items-center gap-2">
+                                        <Database className="w-4 h-4" /> Local Intelligence
+                                    </h3>
+                                    <p className="text-sm text-gray-400">Powered by Ollama running locally. No data leaves your network.</p>
+                                </div>
+                                <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                                    <h3 className="font-semibold text-green-400 mb-2 flex items-center gap-2">
+                                        <GitBranch className="w-4 h-4" /> Tool Integration
+                                    </h3>
+                                    <p className="text-sm text-gray-400">Directly interacts with Jenkins, Jira, SonarQube, and more.</p>
                                 </div>
                             </div>
+
+                            <h3 className="text-xl font-semibold text-gray-200 mt-8 mb-4">Core Capabilities</h3>
+                            <ul className="list-disc list-inside text-gray-300 space-y-2">
+                                <li><strong>Start Builds:</strong> Trigger Jenkins pipelines purely via natural language.</li>
+                                <li><strong>Analyze Code:</strong> Fetch SonarQube metrics and get AI-driven improvements.</li>
+                                <li><strong>Manage Tickets:</strong> Create, summarize, and update Jira issues.</li>
+                                <li><strong>Search Logs:</strong> Query Elasticsearch for error patterns.</li>
+                                <li><strong>Visualize Data:</strong> Fetch Grafana dashboard states.</li>
+                            </ul>
+                        </div>
+                    </div>
+                );
+            case 'interface':
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                        <h2 className="text-2xl font-bold text-gray-100">Interface & Modes</h2>
+
+                        <div className="space-y-8">
+                            <section>
+                                <h3 className="text-lg font-semibold text-purple-400 mb-3">GUI vs. Terminal Mode</h3>
+                                <p className="text-gray-300 mb-4">
+                                    Toggle between two distinct visual experiences using the <code className="bg-black/30 px-1.5 py-0.5 rounded text-xs border border-gray-700">TERM_MODE</code> button.
+                                </p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-black border border-green-900/50 rounded-lg">
+                                        <div className="text-green-500 font-mono text-xs mb-2">$ ./terminal_mode</div>
+                                        <p className="text-gray-400 text-sm">Hacker-style aesthetic with scanlines, monospace fonts, and high-contrast green text. Optimized for engineering flows.</p>
+                                    </div>
+                                    <div className="p-4 bg-white/5 border border-purple-500/20 rounded-lg">
+                                        <div className="text-purple-300 font-sans text-xs mb-2">GUI Mode</div>
+                                        <p className="text-gray-400 text-sm">Modern, clean glassmorphism design. Soft gradients and polished UI elements for executive presentations.</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="text-lg font-semibold text-blue-400 mb-3">Command Palette</h3>
+                                <p className="text-gray-300 mb-2">
+                                    Press <kbd className="bg-gray-800 px-2 py-1 rounded text-xs border border-gray-700 shadow-sm">Cmd+K</kbd> or <kbd className="bg-gray-800 px-2 py-1 rounded text-xs border border-gray-700 shadow-sm">Ctrl+K</kbd> to open the Omni-Bar.
+                                </p>
+                                <ul className="text-sm text-gray-400 space-y-1 ml-4 list-disc">
+                                    <li>Quickly switch sessions</li>
+                                    <li>Toggle modes</li>
+                                    <li>Access Admin Console</li>
+                                    <li>Open documentation</li>
+                                </ul>
+                            </section>
+                        </div>
+                    </div>
+                );
+            case 'devops-suite':
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                        <h2 className="text-2xl font-bold text-gray-100">DevOps Suite (MCP)</h2>
+                        <div className="p-4 bg-yellow-900/20 border border-yellow-700/30 rounded-lg mb-6">
+                            <p className="text-sm text-yellow-200">
+                                <strong>Note:</strong> All tool actions are read-only by default unless configured otherwise. The AI will ask for confirmation before sensitive actions.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-6">
+                            {[
+                                { name: 'Jenkins', color: 'text-red-400', desc: 'List jobs, get build status, trigger parameterized builds.' },
+                                { name: 'Jira', color: 'text-blue-400', desc: 'Get issue details, summarize tickets, find assignees.' },
+                                { name: 'SonarQube', color: 'text-cyan-400', desc: 'Retrieve project analysis, quality gates, and code smells.' },
+                                { name: 'Nexus', color: 'text-green-400', desc: 'Search artifacts, list repositories, check versions.' },
+                                { name: 'Bitbucket', color: 'text-blue-500', desc: 'List repositories, pull requests, and browse source files.' },
+                                { name: 'Elasticsearch', color: 'text-yellow-400', desc: 'Query logs, check cluster health, analyze error rates.' },
+                                { name: 'Grafana', color: 'text-orange-400', desc: 'List dashboards, check alert states.' }
+                            ].map(tool => (
+                                <div key={tool.name} className="flex gap-4 p-4 bg-gray-800/30 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors">
+                                    <div className={`mt-1 font-bold ${tool.color}`}>{tool.name}</div>
+                                    <div className="text-gray-400 text-sm">{tool.desc}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            case 'admin':
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                        <h2 className="text-2xl font-bold text-gray-100">Admin & Security</h2>
+
+                        <div className="space-y-6">
+                            <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700">
+                                <h3 className="text-lg font-semibold text-white mb-4">Admin Dashboard</h3>
+                                <p className="text-gray-300 mb-4">
+                                    Access the centralized dashboard to view system health, LLM performance, and tool usage statistics.
+                                </p>
+                                <div className="grid grid-cols-2 gap-4 text-sm text-gray-400">
+                                    <div>
+                                        <span className="block text-gray-500 text-xs uppercase tracking-wider mb-1">Access</span>
+                                        Command Palette -&gt; Admin Console
+                                    </div>
+                                    <div>
+                                        <span className="block text-gray-500 text-xs uppercase tracking-wider mb-1">Security</span>
+                                        PIN Protected
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700">
+                                <h3 className="text-lg font-semibold text-white mb-4">Default Credentials</h3>
+                                <div className="flex items-center gap-3 p-3 bg-black/30 rounded font-mono text-sm">
+                                    <span className="text-gray-500">PIN:</span>
+                                    <span className="text-green-400">admin</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            default:
+                return <div className="text-gray-400">Select a section to view details.</div>;
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className={`
+                flex w-full max-w-5xl h-[80vh] bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden
+                ${isTerminalMode ? 'shadow-[0_0_50px_rgba(34,197,94,0.1)] border-green-900/50' : 'shadow-[0_0_50px_rgba(124,58,237,0.1)]'}
+            `}>
+                {/* Sidebar */}
+                <div className="w-64 bg-gray-950 border-r border-gray-800 flex flex-col">
+                    <div className="p-6 border-b border-gray-800">
+                        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                            Documentation
+                        </h1>
+                        <div className="mt-4 relative">
+                            <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-500" />
+                            <input
+                                type="text"
+                                placeholder="Search..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                className="w-full bg-gray-900 border border-gray-800 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-300 focus:ring-2 focus:ring-blue-900/50 outline-none transition-all placeholder:text-gray-600"
+                            />
+                        </div>
+                    </div>
+
+                    <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+                        {sections.map(section => (
+                            <button
+                                key={section.id}
+                                onClick={() => setActiveSection(section.id)}
+                                className={`
+                                    w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                                    ${activeSection === section.id
+                                        ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20'
+                                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}
+                                `}
+                            >
+                                {section.icon}
+                                {section.label}
+                            </button>
                         ))}
+                    </nav>
+                </div>
+
+                {/* Content Area */}
+                <div className="flex-1 flex flex-col bg-gray-900 relative">
+                    <button
+                        onClick={onClose}
+                        className="absolute right-6 top-6 p-2 rounded-lg bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors z-10"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+
+                    <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
+                        <div className="max-w-3xl mx-auto">
+                            {renderContent()}
+                        </div>
                     </div>
                 </div>
-            )}
-
-            {/* TAB: MODES */}
-            {activeTab === 'modes' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4 duration-300">
-                    <div className="space-y-4">
-                        <h3 className={`text-lg font-bold border-b pb-2 ${isTerminalMode ? 'border-green-500' : 'border-stc-purple'}`}>GUI Mode (STC Brand)</h3>
-                        <p className="text-sm opacity-80">Designed for modern corporate environments. High readability, friendly aesthetics.</p>
-                        <div className="p-4 bg-stc-light border border-stc-purple/20 rounded-lg space-y-2">
-                            <div className="flex gap-2">
-                                <div className="w-8 h-8 rounded-full bg-stc-purple"></div>
-                                <div className="flex-1 bg-white rounded-lg p-2 shadow-sm text-stc-purple text-xs">
-                                    Hello! I'm your DevOps Assistant.
-                                </div>
-                            </div>
-                        </div>
-                        <ul className="text-xs space-y-1 opacity-70 list-disc list-inside">
-                            <li>Sans-serif typography</li>
-                            <li>Light mode optimized</li>
-                            <li>Corporate Color Palette</li>
-                        </ul>
-                    </div>
-
-                    <div className="space-y-4">
-                        <h3 className={`text-lg font-bold border-b pb-2 ${isTerminalMode ? 'border-green-500' : 'border-stc-purple'}`}>Terminal Mode</h3>
-                        <p className="text-sm opacity-80">Designed for power users and retro-enthusiasts. High contrast, low distraction.</p>
-                        <div className="p-4 bg-black border border-green-500 rounded-lg space-y-2 font-mono">
-                            <div className="flex gap-2">
-                                <div className="text-green-500 text-xs">{'>'} SYS_CORE</div>
-                            </div>
-                            <div className="text-green-400 text-xs pl-4">
-                                System Online. Ready for input...<span className="animate-pulse">_</span>
-                            </div>
-                        </div>
-                         <ul className="text-xs space-y-1 opacity-70 list-disc list-inside">
-                            <li>Monospace typography</li>
-                            <li>CRT Scanline effects</li>
-                            <li>Matrix Rain background</li>
-                        </ul>
-                    </div>
-                </div>
-            )}
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
