@@ -87,5 +87,19 @@ export const metricsService = {
 
     clearMetrics: () => {
         localStorage.removeItem(STORAGE_KEY);
+    },
+
+    importMetrics: (data: any) => {
+        try {
+            // Basic validation
+            if (data && Array.isArray(data.llmRequests) && Array.isArray(data.toolUsage)) {
+                metricsService.saveMetrics(data as SystemMetrics);
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error('Failed to import metrics', e);
+            return false;
+        }
     }
 };
