@@ -1,0 +1,10 @@
+{
+    "instances": [
+        {
+            "name": "bitbucket-prod",
+            "baseUrl": "https://bitbucket.company.com",
+            "username": "admin",
+            "apiToken": "XXXX"
+        }
+    ]
+}

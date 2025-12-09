@@ -1,0 +1,10 @@
+{
+    "instances": [
+        {
+            "name": "nexus-prod",
+            "baseUrl": "https://nexus.company.com",
+            "username": "admin",
+            "apiToken": "XXXX"
+        }
+    ]
+}
