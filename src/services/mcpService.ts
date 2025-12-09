@@ -13,7 +13,7 @@ export interface CallToolResult {
     isError?: boolean;
 }
 
-const PROXY_URL = 'http://localhost:3009';
+const PROXY_URL = 'http://localhost:3897';
 
 export const mcpService = {
     getTools: async (): Promise<Tool[]> => {

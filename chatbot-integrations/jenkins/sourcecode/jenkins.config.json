@@ -1,0 +1,10 @@
+{
+    "instances": [
+        {
+            "name": "jenkins",
+            "baseUrl": "http://chatbot-assistant-jenkins-1:8080",
+            "username": "admin",
+            "apiToken": "1145887e02edabd66d1ef00f2c5acdb67a"
+        }
+    ]
+}

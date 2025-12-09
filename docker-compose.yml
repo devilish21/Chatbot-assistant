@@ -9,25 +9,26 @@ services:
       - "5173:80"
     restart: unless-stopped
     depends_on:
-      - mcp-server
+      - jenkins-mcp-multi
     networks:
       - app-network
 
-  mcp-server:
+  jenkins-mcp-multi:
     build:
-      context: ./chatbot-integrations
+      context: ./chatbot-integrations/jenkins/sourcecode
       dockerfile: Dockerfile
     ports:
-      - "3009:3009"
-    env_file:
-      - ./chatbot-integrations/.env
+      - "3897:3897"
+    volumes:
+      - ./chatbot-integrations/jenkins/sourcecode/jenkins.config.json:/app/jenkins.config.json:ro
     environment:
-      - PORT=3009
-    restart: unless-stopped
+      - PORT=3897
+      - JENKINS_CONFIG_PATH=/app/jenkins.config.json
+    restart: always
     networks:
       - app-network
     healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3009/tools || exit 1" ]
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3897/health || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
