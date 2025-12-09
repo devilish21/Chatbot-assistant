@@ -1,13 +1,10 @@
 {
-    "nexus_url": "https://nexus.example.com",
-    "username": "admin",
-    "password": "password",
     "instances": [
         {
             "name": "Production Nexus",
-            "url": "https://nexus.prod.example.com",
+            "baseUrl": "http://nexus:8081",
             "username": "admin",
-            "password": "prod-password"
+            "apiToken": "admin123"
         }
     ]
 }

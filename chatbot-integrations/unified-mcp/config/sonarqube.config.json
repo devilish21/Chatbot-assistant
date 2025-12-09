@@ -1,11 +1,10 @@
 {
-    "sonarqube_url": "https://sonar.example.com",
-    "token": "token",
     "instances": [
         {
             "name": "Production SonarQube",
-            "url": "https://sonar.prod.example.com",
-            "token": "prod-token"
+            "baseUrl": "http://sonarqube:9000",
+            "username": "admin",
+            "apiToken": "admin"
         }
     ]
 }

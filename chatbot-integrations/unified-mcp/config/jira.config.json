@@ -1,13 +1,11 @@
 {
-    "jira_url": "https://jira.example.com",
-    "username": "admin",
-    "api_token": "token",
     "instances": [
         {
             "name": "Production Jira",
-            "url": "https://jira.prod.example.com",
+            "baseUrl": "https://jira.prod.example.com",
             "username": "admin",
-            "api_token": "prod-token"
+            "apiToken": "prod-token",
+            "allowedProjectKey": "PROJ"
         }
     ]
 }

@@ -1,11 +1,9 @@
 {
-    "grafana_url": "http://grafana:3000",
-    "api_key": "admin",
     "instances": [
         {
             "name": "Production Grafana",
-            "url": "http://grafana.prod.example.com",
-            "api_key": "prod-key"
+            "baseUrl": "http://grafana:3000",
+            "apiToken": "admin"
         }
     ]
 }
