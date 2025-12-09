@@ -19,6 +19,7 @@ RUN npm ci --only=production
 RUN apk add --no-cache python3 py3-pip git && \
     python3 -m venv /app/venv && \
     /app/venv/bin/pip install --upgrade pip && \
+    /app/venv/bin/pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
     /app/venv/bin/pip install --no-cache-dir --timeout 1000 git+https://github.com/Jordan-Jarvis/jenkins-mcp-enterprise
 
 # Copy source
