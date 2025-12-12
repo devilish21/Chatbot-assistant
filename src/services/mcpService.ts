@@ -13,12 +13,16 @@ export interface CallToolResult {
     isError?: boolean;
 }
 
-const PROXY_URL = 'http://localhost:3009';
+const PROXY_URL = '/api';
 
 export const mcpService = {
-    getTools: async (): Promise<Tool[]> => {
+    getTools: async (categories?: string[]): Promise<Tool[]> => {
         try {
-            const response = await fetch(`${PROXY_URL}/tools`);
+            const url = categories && categories.length > 0
+                ? `${PROXY_URL}/tools?categories=${categories.join(',')}`
+                : `${PROXY_URL}/tools`;
+
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`Failed to fetch tools: ${response.statusText}`);
             }
@@ -27,6 +31,19 @@ export const mcpService = {
         } catch (error) {
             console.error("Error fetching tools from Unified MCP:", error);
             // Return empty array for resilience
+            return [];
+        }
+    },
+
+    getCategories: async (): Promise<string[]> => {
+        try {
+            const response = await fetch(`${PROXY_URL}/categories`);
+            if (!response.ok) {
+                return [];
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Error fetching categories:", error);
             return [];
         }
     },

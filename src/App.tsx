@@ -12,6 +12,8 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { AppConfig, ChatSession, Toast, Snippet } from './types';
 import { DEFAULT_CONFIG } from './constants';
 
+import { mcpService } from './services/mcpService';
+
 const STORAGE_KEY = 'devops_chatbot_sessions';
 const SNIPPETS_KEY = 'devops_chatbot_snippets';
 const CONFIG_KEY = 'devops_chatbot_config';
@@ -35,7 +37,18 @@ const App: React.FC = () => {
   // Advanced Features State
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const [demoInput, setDemoInput] = useState<string>('');
 
+  // Tool Categorization State
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchCats = async () => {
+      const cats = await mcpService.getCategories();
+      setAvailableCategories(cats);
+    };
+    fetchCats();
+  }, []);
   // Matrix Rain Canvas Ref
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -235,6 +248,11 @@ const App: React.FC = () => {
   // Loading State (Initial)
   if (!activeSession && !isLoaded) return <div className={`h-screen w-full ${isTerminalMode ? 'bg-black' : 'bg-stc-light'}`}></div>;
 
+  const handleSelectDemo = (text: string) => {
+    setDemoInput(text);
+    setShowManual(false);
+  };
+
   return (
     <div className={`relative flex h-screen w-full overflow-hidden transition-colors duration-300 ${themeClasses}`}>
 
@@ -290,6 +308,7 @@ const App: React.FC = () => {
           isOpen={showManual}
           onClose={() => setShowManual(false)}
           isTerminalMode={isTerminalMode}
+          onSelectDemo={handleSelectDemo}
         />
 
         {showDashboard && (
@@ -404,6 +423,25 @@ const App: React.FC = () => {
               onOpenAdmin={() => setShowAdmin(true)}
               addToast={addToast}
               onToggleSuggestions={() => setConfig(prev => ({ ...prev, enableSuggestions: !prev.enableSuggestions }))}
+              forcedInput={demoInput}
+              onInputCleared={() => setDemoInput('')}
+              availableCategories={availableCategories}
+              onToggleCategory={(cat) => {
+                const current = config.activeCategories || [];
+                // Single Select Logic:
+                const updated = current.includes(cat) ? [] : [cat];
+
+                // NEW: Auto-enable Master Switch if we have at least one category selected
+                // This consolidating preventing the race condition in ChatInterface
+                const shouldEnableMaster = updated.length > 0;
+
+                setConfig(prev => ({
+                  ...prev,
+                  activeCategories: updated,
+                  toolSafety: shouldEnableMaster ? true : prev.toolSafety
+                }));
+              }}
+              onToggleMaster={() => setConfig({ ...config, toolSafety: !config.toolSafety })}
             />
           )}
         </div>

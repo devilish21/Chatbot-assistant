@@ -17,6 +17,11 @@ interface ChatInterfaceProps {
     onOpenAdmin: () => void;
     addToast: (msg: string, type?: 'info' | 'success' | 'error') => void;
     onToggleSuggestions: () => void;
+    forcedInput?: string;
+    onInputCleared?: () => void;
+    availableCategories?: string[];
+    onToggleCategory?: (cat: string) => void;
+    onToggleMaster?: () => void;
 }
 
 const DEFAULT_QUESTIONS = [
@@ -35,7 +40,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     onOpenPromptLibrary,
     onOpenAdmin,
     addToast,
-    onToggleSuggestions
+    onToggleSuggestions,
+    forcedInput,
+    onInputCleared,
+    availableCategories,
+    onToggleCategory,
+    onToggleMaster
 }) => {
     const [input, setInput] = useState('');
     const [status, setStatus] = useState<ChatStatus>(ChatStatus.IDLE);
@@ -67,12 +77,21 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }
     }, [messages, status, shouldAutoScroll]);
 
+    // Auto-resize textarea based on content
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
             textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
         }
     }, [input]);
+
+    useEffect(() => {
+        if (forcedInput) {
+            setInput(forcedInput);
+            if (textareaRef.current) textareaRef.current.focus();
+            if (onInputCleared) onInputCleared();
+        }
+    }, [forcedInput, onInputCleared]);
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -151,6 +170,29 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const handleSendMessage = async (textOverride?: string, customHistory?: Message[]) => {
         const textToSend = textOverride || input;
         if (!textToSend.trim() || status === ChatStatus.STREAMING) return;
+
+        // --- NEW: Slash Command Tool Activation Logic ---
+        // Check if the input starts with '/' and matches a known category (case-insensitive)
+        if (textToSend.startsWith('/')) {
+            const potentialCommand = textToSend.split(' ')[0].substring(1).toLowerCase();
+            if (availableCategories?.includes(potentialCommand)) {
+                // If it's a valid category, enable it if not already enabled
+                const currentCats = config.activeCategories || [];
+                if (!currentCats.includes(potentialCommand)) {
+                    // Update state via callback
+                    if (onToggleCategory) {
+                        onToggleCategory(potentialCommand);
+                        addToast(`Activated '${potentialCommand}' tools`, "success");
+                    }
+                }
+                // Ensure Master Switch is ON
+                if (!config.toolSafety && onToggleMaster) {
+                    onToggleMaster();
+                    addToast("Master Tool Switch Enabled", "success");
+                }
+            }
+        }
+        // ------------------------------------------------
 
         if (textToSend.trim() === '/admin') {
             setInput('');
@@ -376,6 +418,78 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                                 ? 'bg-black border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)] focus-within:shadow-[0_0_20px_rgba(34,197,94,0.4)]'
                                 : 'bg-white border-stc-purple/20 rounded-xl shadow-xl focus-within:border-stc-coral focus-within:ring-1 focus-within:ring-stc-coral/20'}
                     `}>
+                            {/* NEW: Tool Control Area */}
+                            <div className="relative group/tools">
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        // Just a visual toggle for now, popover is hover-based
+                                    }}
+                                    className={`
+                                    flex items-center justify-center h-7 w-7 rounded transition-colors
+                                    ${config.toolSafety
+                                            ? (isTerminalMode ? 'bg-green-900/30 text-green-500' : 'bg-stc-purple/10 text-stc-purple')
+                                            : (isTerminalMode ? 'text-gray-600' : 'text-gray-400 hover:bg-gray-100')}
+                                `}
+                                    title="Tool Settings"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                </button>
+
+                                {/* Tool Settings Popover */}
+                                <div className={`
+                                    absolute bottom-full left-0 mb-3 w-48 rounded-lg border shadow-xl p-3 z-50
+                                    invisible opacity-0 group-hover/tools:visible group-hover/tools:opacity-100 transition-all duration-200
+                                    ${isTerminalMode ? 'bg-black border-green-500' : 'bg-white border-stc-purple/20'}
+                                `}>
+                                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-current opacity-50">
+                                        <span className="text-[10px] uppercase font-bold tracking-wider">Active Tools</span>
+                                        <button
+                                            onClick={onToggleMaster}
+                                            className={`text-[10px] font-bold ${config.toolSafety ? 'text-green-500' : 'text-gray-400'}`}
+                                        >
+                                            {config.toolSafety ? 'ON' : 'OFF'}
+                                        </button>
+                                    </div>
+
+                                    {/* Always show categories, but they auto-enable the switch */}
+                                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto custom-scrollbar p-1">
+                                        {availableCategories?.map(cat => (
+                                            <label key={cat} className={`
+                                                    cursor-pointer text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all duration-200 select-none
+                                                    ${config.activeCategories?.includes(cat)
+                                                    ? (isTerminalMode
+                                                        ? 'bg-green-500 text-black border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]'
+                                                        : 'bg-stc-purple text-white border-stc-purple shadow-md transform scale-105')
+                                                    : (isTerminalMode
+                                                        ? 'bg-black text-green-700 border-green-900 hover:border-green-500 hover:text-green-500'
+                                                        : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-stc-purple/30 hover:text-stc-purple')}
+                                                `}>
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={config.activeCategories?.includes(cat) || false}
+                                                    onChange={() => {
+                                                        const isEnabling = !config.activeCategories?.includes(cat);
+                                                        if (onToggleCategory) onToggleCategory(cat);
+
+                                                        if (isEnabling && textareaRef.current) {
+                                                            textareaRef.current.focus();
+                                                        }
+                                                    }}
+                                                />
+                                                <span className="capitalize">{cat}</span>
+                                            </label>
+                                        ))}
+                                        {(!availableCategories || availableCategories.length === 0) && (
+                                            <div className="w-full text-[10px] italic opacity-50 text-center py-2">No categories found</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className={`w-px h-6 self-center mx-1 ${isTerminalMode ? 'bg-green-900' : 'bg-gray-200'}`}></div>
+
                             <button
                                 onClick={onOpenPromptLibrary}
                                 className={`flex-shrink-0 h-7 w-7 flex items-center justify-center rounded hover:bg-opacity-10 transition-colors ${isTerminalMode ? 'text-green-500 hover:bg-green-500' : 'text-stc-purple hover:bg-stc-purple'}`}
@@ -383,6 +497,26 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
                             </button>
+
+                            {/* Active Tool Chip in Input Area */}
+                            {config.activeCategories && config.activeCategories.length > 0 && (
+                                <div className="flex items-center gap-1 self-center">
+                                    {config.activeCategories.map(cat => (
+                                        <div key={cat} className={`
+                                            flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider select-none
+                                            ${isTerminalMode ? 'bg-green-900/50 text-green-400 border border-green-500/50' : 'bg-stc-purple text-white'}
+                                        `}>
+                                            <span>{cat}</span>
+                                            <button
+                                                onClick={() => onToggleCategory && onToggleCategory(cat)}
+                                                className="hover:text-red-400 transition-colors"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             <textarea
                                 ref={textareaRef}

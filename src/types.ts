@@ -6,7 +6,9 @@ export interface AppConfig {
   temperature: number;
   systemInstruction: string;
   enableSuggestions: boolean;
-  enableVisualEffects?: boolean;
+  enableVisualEffects: boolean;
+  toolSafety: boolean;
+  activeCategories?: string[];
   // Admin Settings
   maxOutputTokens?: number;
   contextWindowSize?: number;

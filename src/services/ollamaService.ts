@@ -28,15 +28,19 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
     const url = `${endpoint}/api/chat`;
 
     // Map internal tools to Ollama format
-    const mcpTools = await mcpService.getTools();
-    const ollamaTools = mcpTools.map(tool => ({
-        type: 'function',
-        function: {
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.inputSchema
-        }
-    }));
+    // CRITICAL FIX: Only fetch and send tools if the Master Tool Switch (toolSafety) is ON.
+    let ollamaTools: any[] = [];
+    if (config.toolSafety) {
+        const mcpTools = await mcpService.getTools(config.activeCategories);
+        ollamaTools = mcpTools.map(tool => ({
+            type: 'function',
+            function: {
+                name: tool.name,
+                description: tool.description,
+                parameters: tool.inputSchema
+            }
+        }));
+    }
 
     // Prepare initial messages
     let conversationHistory: OllamaMessage[] = messages

@@ -9,6 +9,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   systemInstruction: 'You are an advanced DevOps Omni-Assistant. Your expertise spans the entire software development lifecycle (SDLC): Planning, Coding (Git, Best Practices), Building (CI/CD), Testing, Releasing, Deploying (IaC, Containers, Cloud), Operating, and Monitoring (Observability, SRE). You are not limited to infrastructure; you help with scripts, debugging applications, system architecture, security (DevSecOps), and automation strategy. Be precise, technical, and concise.',
   enableSuggestions: true,
   enableVisualEffects: true,
+  toolSafety: false,
+  activeCategories: [],
   // Admin Defaults
   maxOutputTokens: 1024,
   contextWindowSize: 1000, // Default context window

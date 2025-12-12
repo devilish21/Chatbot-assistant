@@ -6,7 +6,6 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import dotenv from 'dotenv';
 
 // Import ToolsManagers from integrations
-// Note: We need to ensure these files exist and export ToolsManager and ConfigLoader
 import { ToolsManager as JiraManager } from './integrations/jira/tools/index.js';
 import { ConfigLoader as JiraConfig } from './integrations/jira/config.js';
 
@@ -25,7 +24,7 @@ import { ConfigLoader as ElasticConfig } from './integrations/elasticsearch/conf
 import { ToolsManager as GrafanaManager } from './integrations/grafana/tools/index.js';
 import { ConfigLoader as GrafanaConfig } from './integrations/grafana/config.js';
 
-// Jenkins is slightly different as it was refactored recently, let's normalize it
+// Jenkins
 import { JENKINS_TOOLS } from './integrations/jenkins/tools/index.js';
 import { JenkinsClient } from './integrations/jenkins/clients/jenkins.js';
 
@@ -37,37 +36,53 @@ const PORT = process.env.PORT || 3009;
 app.use(cors());
 app.use(express.json());
 
+// Categories
+const CATEGORIES = {
+    JIRA: 'jira',
+    SONARQUBE: 'sonarqube',
+    NEXUS: 'nexus',
+    BITBUCKET: 'bitbucket',
+    ELASTIC: 'elasticsearch',
+    GRAFANA: 'grafana',
+    JENKINS: 'jenkins',
+};
+
 // Initialize Managers
-const managers: any[] = [];
+interface ManagerEntry {
+    category: string;
+    instance: any;
+}
+
+const managers: ManagerEntry[] = [];
 let jenkinsClient: JenkinsClient;
 
 async function initManagers() {
     try {
         // Jira
         const jiraConfig = await JiraConfig.load();
-        managers.push(new JiraManager(jiraConfig));
+        managers.push({ category: CATEGORIES.JIRA, instance: new JiraManager(jiraConfig) });
 
         // SonarQube
         const sonarConfig = await SonarConfig.load();
-        managers.push(new SonarManager(sonarConfig));
+        managers.push({ category: CATEGORIES.SONARQUBE, instance: new SonarManager(sonarConfig) });
 
         // Nexus
         const nexusConfig = await NexusConfig.load();
-        managers.push(new NexusManager(nexusConfig));
+        managers.push({ category: CATEGORIES.NEXUS, instance: new NexusManager(nexusConfig) });
 
         // Bitbucket
         const bitbucketConfig = await BitbucketConfig.load();
-        managers.push(new BitbucketManager(bitbucketConfig));
+        managers.push({ category: CATEGORIES.BITBUCKET, instance: new BitbucketManager(bitbucketConfig) });
 
         // Elasticsearch
         const elasticConfig = await ElasticConfig.load();
-        managers.push(new ElasticManager(elasticConfig));
+        managers.push({ category: CATEGORIES.ELASTIC, instance: new ElasticManager(elasticConfig) });
 
         // Grafana
         const grafanaConfig = await GrafanaConfig.load();
-        managers.push(new GrafanaManager(grafanaConfig));
+        managers.push({ category: CATEGORIES.GRAFANA, instance: new GrafanaManager(grafanaConfig) });
 
-        // Jenkins (Manual Setup)
+        // Jenkins
         jenkinsClient = new JenkinsClient({
             url: process.env.JENKINS_URL || "http://jenkins:8080",
             user: process.env.JENKINS_USER || "admin",
@@ -80,16 +95,22 @@ async function initManagers() {
     }
 }
 
-async function getAllTools() {
+async function getAllTools(categories?: string[]) {
     let allTools: any[] = [];
+    const requestedCategories = categories ? new Set(categories) : null;
+    const shouldInclude = (cat: string) => !requestedCategories || requestedCategories.has(cat);
 
     // Add Tools from Managers
-    for (const manager of managers) {
-        allTools = allTools.concat(manager.getToolDefinitions());
+    for (const entry of managers) {
+        if (shouldInclude(entry.category)) {
+            allTools = allTools.concat(entry.instance.getToolDefinitions());
+        }
     }
 
     // Add Jenkins Tools
-    allTools = allTools.concat(JENKINS_TOOLS);
+    if (shouldInclude(CATEGORIES.JENKINS)) {
+        allTools = allTools.concat(JENKINS_TOOLS);
+    }
 
     return allTools;
 }
@@ -111,10 +132,10 @@ async function handleToolCall(name: string, args: any) {
     }
 
     // Check Managers
-    for (const manager of managers) {
-        const definitions = manager.getToolDefinitions();
+    for (const entry of managers) {
+        const definitions = entry.instance.getToolDefinitions();
         if (definitions.find((t: any) => t.name === name)) {
-            return await manager.handleToolCall(name, args);
+            return await entry.instance.handleToolCall(name, args);
         }
     }
 
@@ -148,8 +169,14 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Express Routes
 app.get('/tools', async (req, res) => {
-    const tools = await getAllTools();
+    const categoriesParams = req.query.categories as string;
+    const categories = categoriesParams ? categoriesParams.split(',') : undefined;
+    const tools = await getAllTools(categories);
     res.json({ tools });
+});
+
+app.get('/categories', (req, res) => {
+    res.json(Object.values(CATEGORIES));
 });
 
 app.post('/call-tool', async (req, res) => {
