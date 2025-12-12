@@ -438,7 +438,9 @@ const App: React.FC = () => {
                 setConfig(prev => ({
                   ...prev,
                   activeCategories: updated,
-                  toolSafety: shouldEnableMaster ? true : prev.toolSafety
+                  // Fix: If we have active categories, Tool Safety is ON.
+                  // If we have none, logic dictates we should go back to OFF to prevent "Select All" leakage.
+                  toolSafety: shouldEnableMaster
                 }));
               }}
               onToggleMaster={() => setConfig({ ...config, toolSafety: !config.toolSafety })}

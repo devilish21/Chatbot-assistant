@@ -77,29 +77,50 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                 tools: ollamaTools.length > 0 ? ollamaTools : undefined
             };
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
+            const payloadString = JSON.stringify(body);
+            console.log(`[OllamaService] Request Payload Size: ${payloadString.length} bytes`);
+            console.log(`[OllamaService] Sending request to: ${url}`);
 
-            if (!response.ok) {
-                throw new Error(`Ollama API Error: ${response.statusText}`);
+            let response;
+            try {
+                response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payloadString
+                });
+            } catch (netErr: any) {
+                console.error("[OllamaService] Network Fetch Failed:", netErr);
+                // Check for common causes
+                if (netErr.name === 'TypeError' && netErr.message === 'Failed to fetch') {
+                    console.error("[OllamaService] Potential causes: CORS, Offline, Server Unreachable, or Connection Reset by Peer (Nginx limit).");
+                }
+                throw new Error(`Network Connection Failed: ${netErr.message} (See Console for details)`);
             }
 
-            if (!response.body) throw new Error("No response body");
+            console.log(`[OllamaService] Response Status: ${response.status} ${response.statusText}`);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`[OllamaService] Server Error Body: ${errorText}`);
+                throw new Error(`Ollama API Error (${response.status}): ${response.statusText} - ${errorText.substring(0, 100)}...`);
+            }
+
+            if (!response.body) throw new Error("No response body received");
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let isThinking = false;
 
+            console.log("[OllamaService] Stream started...");
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) {
+                    console.log("[OllamaService] Stream complete.");
                     if (isThinking) yield '</think>';
                     break;
                 }
-
+                // ... rest of stream logic
                 const chunk = decoder.decode(value, { stream: true });
                 const lines = chunk.split('\n');
 
@@ -146,7 +167,7 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                 }
             }
 
-            // After streaming is done for this turn
+            // ... tool execution logic ...
             if (toolCalls.length > 0) {
                 // Add the assistant's message with tool calls to history
                 conversationHistory.push({
@@ -160,13 +181,8 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                     const functionName = toolCall.function.name;
                     const functionArgs = toolCall.function.arguments;
 
-                    // Notify UI (optional, mimicking a system message or thought)
-                    // yield `\n\n*Calling tool: ${functionName}*...\n\n`; 
-                    // Better to rely on the final response or context. 
-                    // Let's print a small debug/info text? 
-                    // Actually, let's allow it to happen silently or "Thinking" style if we could.
-
                     try {
+                        console.log(`[OllamaService] Executing Tool: ${functionName}`);
                         const result = await mcpService.callTool(functionName, functionArgs);
 
                         metricsService.trackToolUsage({
@@ -182,6 +198,7 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                             content: JSON.stringify(result)
                         });
                     } catch (err: any) {
+                        console.error(`[OllamaService] Tool Error (${functionName}):`, err);
                         metricsService.trackToolUsage({
                             toolName: functionName,
                             service: 'unknown',

@@ -24,7 +24,9 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: 'http://localhost:3009',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, '')
+          rewrite: (path) => path.replace(/^\/api/, ''),
+          timeout: 3600000,
+          proxyTimeout: 3600000
         }
       }
     }

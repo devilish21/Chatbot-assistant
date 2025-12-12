@@ -7,13 +7,13 @@ export const DEFAULT_CONFIG: AppConfig = {
   model: 'qwen3:8b',
   temperature: 0.7,
   systemInstruction: 'You are an advanced DevOps Omni-Assistant. Your expertise spans the entire software development lifecycle (SDLC): Planning, Coding (Git, Best Practices), Building (CI/CD), Testing, Releasing, Deploying (IaC, Containers, Cloud), Operating, and Monitoring (Observability, SRE). You are not limited to infrastructure; you help with scripts, debugging applications, system architecture, security (DevSecOps), and automation strategy. Be precise, technical, and concise.',
-  enableSuggestions: true,
+  enableSuggestions: false,
   enableVisualEffects: true,
   toolSafety: false,
   activeCategories: [],
   // Admin Defaults
-  maxOutputTokens: 1024,
-  contextWindowSize: 1000, // Default context window
+  maxOutputTokens: 10000,
+  contextWindowSize: 10000, // Default context window
   botName: 'DevOps Assistant',
   welcomeMessage: "DevOps Assistant Online.\nReady for Code, Pipeline, Security, and Infrastructure operations...",
   systemAlert: "This is a beta version, please expect lag",
