@@ -9,6 +9,7 @@ export interface AppConfig {
   enableVisualEffects: boolean;
   toolSafety: boolean;
   activeCategories?: string[];
+  snippetVersion?: number;
   // Admin Settings
   maxOutputTokens?: number;
   contextWindowSize?: number;
@@ -62,6 +63,7 @@ export interface Snippet {
   id: string;
   title: string;
   content: string;
+  category?: string;
 }
 
 export interface LLMRequestMetric {

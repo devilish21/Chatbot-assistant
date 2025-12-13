@@ -12,6 +12,11 @@ COPY . .
 
 # Build the app (creates a /dist folder)
 # Note: We pass the API key at build time or runtime (see step 3)
+# Run tests before building
+RUN npm test -- --run
+
+# Build the app (creates a /dist folder)
+# Note: We pass the API key at build time or runtime (see step 3)
 RUN npm run build
 
 # Stage 2: Serve with Nginx (High Performance)

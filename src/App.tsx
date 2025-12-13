@@ -11,7 +11,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { AdminPortal } from './components/AdminPortal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AppConfig, ChatSession, Toast, Snippet, Category } from './types';
-import { DEFAULT_CONFIG } from './constants';
+import { DEFAULT_CONFIG, DEFAULT_SNIPPETS } from './constants';
 
 import { mcpService } from './services/mcpService';
 import { metricsService } from './services/metricsService';
@@ -20,10 +20,16 @@ const STORAGE_KEY = 'devops_chatbot_sessions';
 const SNIPPETS_KEY = 'devops_chatbot_snippets';
 const CONFIG_KEY = 'devops_chatbot_config';
 
+import { AdminLogin } from './components/AdminLogin';
+
 const App: React.FC = () => {
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
   const [isTerminalMode, setIsTerminalMode] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
+
+  // Routing State
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   // Session Management
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -32,7 +38,7 @@ const App: React.FC = () => {
 
   // UI Visibility States
   const [showManual, setShowManual] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false); // Legacy internal modal toggle (mostly unused now for admin)
   const [showDashboard, setShowDashboard] = useState(false);
   const [showPromptLibrary, setShowPromptLibrary] = useState(false);
 
@@ -40,6 +46,11 @@ const App: React.FC = () => {
     // Performance Telemetry
     const loadTime = performance.now();
     metricsService.trackSessionStart(loadTime, navigator.userAgent);
+
+    // Routing Listener
+    const handlePopState = () => setCurrentPath(window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // Advanced Features State
@@ -95,12 +106,49 @@ const App: React.FC = () => {
       setIsLoaded(true);
     }, 10);
 
-    // C. Load Snippets
+
+    // C. Load Snippets with Versioning
     const savedSnippets = localStorage.getItem(SNIPPETS_KEY);
-    if (savedSnippets) {
+    const savedVersion = localStorage.getItem(SNIPPETS_KEY + '_version');
+    const currentVersion = String(DEFAULT_CONFIG.snippetVersion || 1);
+
+    if (savedSnippets && savedVersion === currentVersion) {
       try {
-        setSnippets(JSON.parse(savedSnippets));
-      } catch (e) { console.error("Failed to parse snippets", e); }
+        const parsed = JSON.parse(savedSnippets);
+        // Merge defaults if they don't exist (handle user deletions)
+        const merged = [...parsed];
+        let hasChanges = false;
+        DEFAULT_SNIPPETS.forEach(def => {
+          if (!parsed.some((s: Snippet) => s.id === def.id)) {
+            merged.push(def);
+            hasChanges = true;
+          }
+        });
+        setSnippets(merged);
+        if (hasChanges) localStorage.setItem(SNIPPETS_KEY, JSON.stringify(merged));
+      } catch (e) {
+        console.error("Failed to parse snippets", e);
+        setSnippets(DEFAULT_SNIPPETS);
+        localStorage.setItem(SNIPPETS_KEY + '_version', currentVersion);
+        localStorage.setItem(SNIPPETS_KEY, JSON.stringify(DEFAULT_SNIPPETS));
+      }
+    } else {
+      // Force update if version mismatch or no snippets
+      console.log("Snippet version mismatch or empty. Forced update to v" + currentVersion);
+      // We want to keep user CUSTOM snippets if possible? 
+      // For now, simpler to just merge defaults and overwrite matching IDs
+      let initial: Snippet[] = [];
+      if (savedSnippets) {
+        try {
+          const old = JSON.parse(savedSnippets);
+          // Keep only snippets that are NOT in defaults (custom ones)
+          initial = old.filter((s: Snippet) => !DEFAULT_SNIPPETS.some(d => d.id === s.id));
+        } catch (e) { /* ignore corrupt data */ }
+      }
+      const combined = [...DEFAULT_SNIPPETS, ...initial];
+      setSnippets(combined);
+      localStorage.setItem(SNIPPETS_KEY, JSON.stringify(combined));
+      localStorage.setItem(SNIPPETS_KEY + '_version', currentVersion);
     }
   }, []);
 
@@ -275,6 +323,36 @@ const App: React.FC = () => {
   const highlightClass = isTerminalMode ? "text-green-400 font-bold" : "text-stc-coral font-bold";
   const dividerClass = isTerminalMode ? "border-green-500/30" : "border-stc-purple/10";
 
+  // --- ROUTING: ADMIN VIEW ---
+  if (currentPath === '/admin') {
+    if (!isAdminAuthenticated) {
+      return (
+        <AdminLogin
+          onLogin={() => setIsAdminAuthenticated(true)}
+          isTerminalMode={isTerminalMode}
+        />
+      );
+    }
+    // Authenticated Admin View
+    return (
+      <AdminPanel
+        isOpen={true} // Always open
+        onClose={() => {
+          // Reset routing and auth state to exit
+          window.history.pushState({}, '', '/');
+          setCurrentPath('/');
+          setIsAdminAuthenticated(false);
+        }}
+        config={config}
+        onSaveConfig={(newConfig) => setConfig(newConfig)}
+        isTerminalMode={isTerminalMode}
+        addToast={addToast}
+        onOpenMetrics={() => setShowDashboard(true)} // Can be removed or ignored
+      />
+    );
+  }
+
+  // --- ROUTING: MAIN CHAT VIEW ---
   return (
     <div className={`relative flex h-screen w-full overflow-hidden transition-colors duration-300 ${themeClasses}`}>
 
@@ -315,7 +393,7 @@ const App: React.FC = () => {
             { id: 'zen', title: 'Toggle Zen Mode', shortcut: ['Z'], action: () => setIsZenMode(!isZenMode) },
             { id: 'toggle', title: 'Toggle Terminal Mode', shortcut: ['T'], action: () => setIsTerminalMode(!isTerminalMode) },
             { id: 'manual', title: 'Open User Manual', shortcut: ['?'], action: () => setShowManual(true) },
-            { id: 'admin', title: 'Admin Console (Settings)', action: () => setShowAdmin(true) },
+            // Removed 'Admin Console' from Command Palette as it is now /admin path only
             { id: 'snippets', title: 'Open Prompt Library', shortcut: ['P'], action: () => setShowPromptLibrary(true) },
             ...sessions.map(s => ({
               id: s.id,
@@ -332,37 +410,36 @@ const App: React.FC = () => {
           onSelectDemo={handleSelectDemo}
         />
 
-        {showDashboard && (
-          <div className="fixed inset-0 z-[200] animate-in slide-in-from-bottom-10 duration-300">
-            <AdminPortal
-              onClose={() => setShowDashboard(false)}
-              isTerminalMode={isTerminalMode}
-            />
-          </div>
+        {showPromptLibrary && (
+          <PromptLibrary
+            isOpen={showPromptLibrary}
+            onClose={() => setShowPromptLibrary(false)}
+            isTerminalMode={isTerminalMode}
+            snippets={snippets}
+            setSnippets={setSnippets}
+            onSelect={(content, category) => {
+              setDemoInput(content);
+              setShowPromptLibrary(false);
+
+              // Auto-select tool category if provided
+              if (category) {
+                setConfig(prev => {
+                  const current = prev.activeCategories || [];
+                  if (!current.includes(category)) {
+                    const updated = [...current, category];
+                    return {
+                      ...prev,
+                      activeCategories: updated,
+                      toolSafety: true // Enable master switch if we auto-select a tool
+                    };
+                  }
+                  return prev;
+                });
+                addToast(`Auto-selected tool: ${category}`, 'info');
+              }
+            }}
+          />
         )}
-
-        <PromptLibrary
-          isOpen={showPromptLibrary}
-          onClose={() => setShowPromptLibrary(false)}
-          isTerminalMode={isTerminalMode}
-          snippets={snippets}
-          setSnippets={setSnippets}
-          onSelect={(content) => {
-            navigator.clipboard.writeText(content);
-            addToast('Snippet copied to clipboard', 'success');
-            setShowPromptLibrary(false);
-          }}
-        />
-
-        <AdminPanel
-          isOpen={showAdmin}
-          onClose={() => setShowAdmin(false)}
-          config={config}
-          onSaveConfig={(newConfig) => setConfig(newConfig)}
-          isTerminalMode={isTerminalMode}
-          addToast={addToast}
-          onOpenMetrics={() => setShowDashboard(true)}
-        />
 
         <header className={`h-14 flex items-center px-6 justify-between backdrop-blur-md z-20 transition-colors duration-300 flex-shrink-0 ${headerClasses}`}>
           <div className="flex items-center gap-3">
@@ -463,7 +540,6 @@ const App: React.FC = () => {
               isTerminalMode={isTerminalMode}
               isZenMode={isZenMode}
               onOpenPromptLibrary={() => setShowPromptLibrary(true)}
-              onOpenAdmin={() => setShowAdmin(true)}
               addToast={addToast}
               onToggleSuggestions={() => setConfig(prev => ({ ...prev, enableSuggestions: !prev.enableSuggestions }))}
               forcedInput={demoInput}

@@ -14,7 +14,7 @@ interface ChatInterfaceProps {
     isTerminalMode: boolean;
     isZenMode: boolean;
     onOpenPromptLibrary: () => void;
-    onOpenAdmin: () => void;
+
     addToast: (msg: string, type?: 'info' | 'success' | 'error') => void;
     onToggleSuggestions: () => void;
     forcedInput?: string;
@@ -38,7 +38,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     isTerminalMode,
     isZenMode,
     onOpenPromptLibrary,
-    onOpenAdmin,
+
     addToast,
     onToggleSuggestions,
     forcedInput,
@@ -194,12 +194,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }
         // ------------------------------------------------
 
-        if (textToSend.trim() === '/admin') {
-            setInput('');
-            setShowSlashMenu(false);
-            onOpenAdmin();
-            return;
-        }
+
 
         // Enforce Context Window Limit STRICTLY
         // We simulate the exact JSON structure the App uses to calculate tokens
@@ -426,7 +421,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                                         // Just a visual toggle for now, popover is hover-based
                                     }}
                                     className={`
-                                    flex items-center justify-center h-7 w-7 rounded transition-colors
+                                    flex items-center justify-center h-8 w-8 rounded transition-colors
                                     ${config.toolSafety
                                             ? (isTerminalMode ? 'bg-green-900/30 text-green-500' : 'bg-stc-purple/10 text-stc-purple')
                                             : (isTerminalMode ? 'text-gray-600' : 'text-gray-400 hover:bg-gray-100')}
@@ -488,11 +483,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                                 </div>
                             </div>
 
-                            <div className={`w-px h-6 self-center mx-1 ${isTerminalMode ? 'bg-green-900' : 'bg-gray-200'}`}></div>
+
+                            <div className={`w-px h-6 self-end mb-1 mx-1 ${isTerminalMode ? 'bg-green-900' : 'bg-gray-200'}`}></div>
 
                             <button
                                 onClick={onOpenPromptLibrary}
-                                className={`flex-shrink-0 h-7 w-7 flex items-center justify-center rounded hover:bg-opacity-10 transition-colors ${isTerminalMode ? 'text-green-500 hover:bg-green-500' : 'text-stc-purple hover:bg-stc-purple'}`}
+                                className={`flex-shrink-0 h-8 w-8 flex items-center justify-center rounded hover:bg-opacity-10 transition-colors ${isTerminalMode ? 'text-green-500 hover:bg-green-500' : 'text-stc-purple hover:bg-stc-purple'}`}
                                 title="Prompt Library"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
@@ -500,7 +496,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
                             {/* Active Tool Chip in Input Area */}
                             {config.activeCategories && config.activeCategories.length > 0 && (
-                                <div className="flex items-center gap-1 self-center">
+                                <div className="flex items-center gap-1 self-end mb-1">
                                     {config.activeCategories.map(cat => (
                                         <div key={cat} className={`
                                             flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider select-none
@@ -535,6 +531,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             />
 
                             <button
+                                aria-label="Send message"
                                 onClick={() => handleSendMessage()}
                                 disabled={!input.trim() || status === ChatStatus.STREAMING}
                                 className={`
