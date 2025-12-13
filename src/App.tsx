@@ -402,10 +402,7 @@ const App: React.FC = () => {
               )}
             </button>
 
-            <div className={`flex items-center gap-2 px-2 py-0.5 text-[10px] border rounded transition-colors ${isTerminalMode ? 'border-green-500 text-green-500' : 'border-stc-purple/20 text-stc-purple'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isTerminalMode ? 'bg-green-500' : 'bg-stc-purple'}`}></span>
-              ONLINE
-            </div>
+
           </div>
         </header>
 

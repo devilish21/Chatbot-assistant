@@ -341,7 +341,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <div
                     ref={scrollRef}
                     onScroll={handleScroll}
-                    className="flex-1 overflow-y-auto px-4 md:px-6 pt-6 space-y-6 scroll-smooth custom-scrollbar flex flex-col"
+                    className={`flex-1 overflow-y-auto px-4 md:px-6 pt-6 space-y-6 scroll-smooth flex flex-col ${isTerminalMode ? 'terminal-scrollbar' : 'custom-scrollbar'}`}
                 >
                     <div className={`mx-auto w-full h-full flex flex-col ${isZenMode ? 'max-w-6xl' : 'max-w-6xl'}`}>
                         {messages.map((msg, index) => (
@@ -528,7 +528,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                                 className={`
                                 flex-1 max-h-64 bg-transparent border-none focus:ring-0 resize-none py-1.5 leading-relaxed scrollbar-hide text-xs
                                 ${isTerminalMode
-                                        ? 'text-green-400 placeholder-green-800 font-mono'
+                                        ? 'text-green-400 placeholder-green-800 font-mono selection:bg-green-900 selection:text-green-100'
                                         : 'text-stc-purple placeholder-stc-purple/40 font-sans'}
                             `}
                                 disabled={status === ChatStatus.STREAMING}

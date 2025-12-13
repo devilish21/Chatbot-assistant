@@ -18,6 +18,18 @@
   background: #FF375E; 
 }
 
+/* Terminal Scrollbar Variant */
+.terminal-scrollbar::-webkit-scrollbar-track {
+    background: #000000;
+}
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+    background: #22c55e; /* Green-500 */
+    border: 1px solid #14532d; /* Green-900 */
+}
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #4ade80; /* Green-400 */
+}
+
 body {
   background-color: #150029;
   color: #e2e8f0;
