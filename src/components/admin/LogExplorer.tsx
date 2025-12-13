@@ -26,6 +26,18 @@ export const LogExplorer: React.FC<LogExplorerProps> = ({
         });
     }, [logs, logFilter, logLevel, logSearch]);
 
+    const [expandedLogs, setExpandedLogs] = React.useState<Set<string>>(new Set());
+
+    const toggleExpand = (id: string) => {
+        const newSet = new Set(expandedLogs);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        setExpandedLogs(newSet);
+    };
+
     return (
         <div className={`border rounded-xl p-4 font-mono text-xs overflow-hidden h-[600px] flex flex-col ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'}`}>
             {/* Advanced Log Explorer Toolbar */}
@@ -79,31 +91,59 @@ export const LogExplorer: React.FC<LogExplorerProps> = ({
             </div>
 
             {/* Filter Logic */}
-            <div className="overflow-auto flex-1">
-                <table className="w-full text-left">
-                    <thead className="border-b opacity-50 sticky top-0 bg-inherit z-10 shadow-sm">
+            <div className="overflow-auto flex-1 custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                    <thead className={`border-b opacity-50 sticky top-0 z-10 shadow-sm ${isTerminalMode ? 'bg-black' : 'bg-white'}`}>
                         <tr>
-                            <th className="p-2">Time</th>
-                            <th className="p-2">Level</th>
-                            <th className="p-2">Service</th>
+                            <th className="p-2 w-8"></th>
+                            <th className="p-2 w-32">Time</th>
+                            <th className="p-2 w-20">Level</th>
+                            <th className="p-2 w-24">Service</th>
                             <th className="p-2">Message</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredLogs.map((log: any) => (
-                            <tr key={log.id} className="border-b border-opacity-10 hover:bg-white/5 transition-colors">
-                                <td className="p-2 opacity-60 whitespace-nowrap text-[10px]">{new Date(log.timestamp).toLocaleString()}</td>
-                                <td className="p-2">
-                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${log.level === 'ERROR' ? 'bg-red-500/20 text-red-500' :
-                                        log.level === 'WARN' ? 'bg-yellow-500/20 text-yellow-500' :
-                                            'bg-blue-500/10 text-blue-500'
-                                        }`}>
-                                        {log.level}
-                                    </span>
-                                </td>
-                                <td className="p-2 opacity-80">{log.service}</td>
-                                <td className="p-2 truncate max-w-[400px]" title={log.message}>{log.message}</td>
-                            </tr>
+                            <React.Fragment key={log.id}>
+                                <tr
+                                    className={`border-b border-opacity-10 cursor-pointer transition-colors ${expandedLogs.has(log.id) ? 'bg-white/5' : 'hover:bg-white/5'}`}
+                                    onClick={() => toggleExpand(log.id)}
+                                >
+                                    <td className="p-2 text-center opacity-50">
+                                        <svg
+                                            width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                                            className={`transform transition-transform ${expandedLogs.has(log.id) ? 'rotate-90' : ''}`}
+                                        >
+                                            <path d="M9 18l6-6-6-6" />
+                                        </svg>
+                                    </td>
+                                    <td className="p-2 opacity-60 whitespace-nowrap text-[10px]">{new Date(log.timestamp).toLocaleString()}</td>
+                                    <td className="p-2">
+                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${log.level === 'ERROR' ? 'bg-red-500/20 text-red-500' :
+                                            log.level === 'WARN' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                'bg-blue-500/10 text-blue-500'
+                                            }`}>
+                                            {log.level}
+                                        </span>
+                                    </td>
+                                    <td className="p-2 opacity-80">{log.service}</td>
+                                    <td className="p-2 truncate max-w-[400px]" title={log.message}>{log.message}</td>
+                                </tr>
+                                {expandedLogs.has(log.id) && (
+                                    <tr className="bg-black/20">
+                                        <td colSpan={5} className="p-4">
+                                            <div className="text-[10px] font-mono opacity-80">
+                                                <div className="mb-2 font-bold uppercase tracking-wider opacity-60">Metadata Details</div>
+                                                <pre className={`p-3 rounded overflow-x-auto ${isTerminalMode ? 'bg-green-900/10' : 'bg-slate-100'}`}>
+                                                    {log.metadata
+                                                        ? JSON.stringify(log.metadata, null, 2)
+                                                        : <span className="italic opacity-50">No additional metadata available</span>}
+                                                </pre>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </React.Fragment>
                         ))}
                     </tbody>
                 </table>

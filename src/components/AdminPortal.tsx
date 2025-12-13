@@ -80,14 +80,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
     // Trend Data Visualization (Mock/Simulated for visual pop)
     const [trendData, setTrendData] = useState<any[]>([]);
 
-    useEffect(() => {
-        // Initial Mock Trend Data Generation
-        const generatePoint = (i: number) => ({
-            time: new Date(Date.now() - (20 - i) * 180000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            latency: 200 + Math.random() * 300,
-        });
-        setTrendData(Array.from({ length: 20 }, (_, i) => generatePoint(i)));
-    }, []);
+
 
     // Optimized Fetching: Only fetch what is needed for the active tab
     const fetchSignals = useCallback(async (isBackground = false) => {
@@ -113,6 +106,25 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
 
             // Always fetch Golden Signals (Mission Control) as base
             promises.push(fetch(`/api/admin/stats/golden${params}`).then(r => r.json()).then(setGolden));
+
+            // Fetch Real Trend Data for Mission Control Chart
+            if (activeTab === 'mission') {
+                promises.push(
+                    fetch(`/api/admin/metrics/llm`) // currently returns last 100
+                        .then(r => r.json())
+                        .then(data => {
+                            if (Array.isArray(data)) {
+                                // Process for Chart: Sort ascending by time
+                                const sorted = [...data].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+                                const trends = sorted.map(item => ({
+                                    time: new Date(Number(item.timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                    latency: Number(item.duration_ms || 0)
+                                }));
+                                setTrendData(trends);
+                            }
+                        })
+                );
+            }
 
             // Targeted Fetching
             if (activeTab === 'logs') {
