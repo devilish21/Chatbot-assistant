@@ -343,7 +343,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     onScroll={handleScroll}
                     className="flex-1 overflow-y-auto px-4 md:px-6 pt-6 space-y-6 scroll-smooth custom-scrollbar flex flex-col"
                 >
-                    <div className={`mx-auto w-full h-full flex flex-col ${isZenMode ? 'max-w-4xl' : 'max-w-6xl'}`}>
+                    <div className={`mx-auto w-full h-full flex flex-col ${isZenMode ? 'max-w-6xl' : 'max-w-6xl'}`}>
                         {messages.map((msg, index) => (
                             <MessageItem
                                 key={msg.id}
@@ -387,7 +387,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </div>
 
                 <div className={`absolute bottom-0 left-0 right-0 pt-4 pb-4 px-4 md:px-6 z-30 ${isTerminalMode ? 'bg-gradient-to-t from-black via-black to-transparent' : 'bg-gradient-to-t from-stc-light via-stc-light to-transparent'}`}>
-                    <div className={`mx-auto relative space-y-2 ${isZenMode ? 'max-w-4xl' : 'max-w-6xl'}`}>
+                    <div className={`mx-auto relative space-y-2 ${isZenMode ? 'max-w-6xl' : 'max-w-6xl'}`}>
 
                         {showSlashMenu && filteredCommands.length > 0 && (
                             <div className={`absolute bottom-full mb-2 w-full max-w-md rounded-lg border shadow-2xl overflow-hidden ${isTerminalMode ? 'bg-black border-green-500' : 'bg-white border-stc-purple/20'
