@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatInterface } from './components/ChatInterface';
 import { SessionSidebar } from './components/SessionSidebar';
-import { Footer } from './components/Footer';
+
 import CommandPalette from './components/CommandPalette';
 import { UserManual } from './components/UserManual';
 import { ToastContainer } from './components/Toast';
@@ -262,6 +262,19 @@ const App: React.FC = () => {
     setShowManual(false);
   };
 
+  const contextWindowSize = config.contextWindowSize || DEFAULT_CONFIG.contextWindowSize;
+  const tokenPercent = Math.min(100, (tokenUsage / contextWindowSize) * 100);
+  const tokenColor = tokenPercent > 80 ? 'bg-red-500' : tokenPercent > 50 ? 'bg-yellow-500' : (isTerminalMode ? 'bg-green-500' : 'bg-stc-purple');
+
+  const formatSize = (size: number) => {
+    if (size >= 1000000) return (size / 1000000) + 'M';
+    if (size >= 1000) return Math.round(size / 1024) + 'K';
+    return size;
+  };
+
+  const highlightClass = isTerminalMode ? "text-green-400 font-bold" : "text-stc-coral font-bold";
+  const dividerClass = isTerminalMode ? "border-green-500/30" : "border-stc-purple/10";
+
   return (
     <div className={`relative flex h-screen w-full overflow-hidden transition-colors duration-300 ${themeClasses}`}>
 
@@ -361,7 +374,9 @@ const App: React.FC = () => {
             </h1>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex-1" />
+
+          <div className="flex items-center gap-4 mr-6">
             <button
               onClick={() => setIsZenMode(!isZenMode)}
               className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${isTerminalMode ? 'border-green-500 text-green-500 hover:bg-green-900/30' : 'border-stc-purple/20 text-stc-purple hover:bg-stc-purple hover:text-white'} ${isZenMode ? 'bg-green-500/20' : ''}`}
@@ -369,15 +384,6 @@ const App: React.FC = () => {
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></svg>
               <span className="text-[10px] font-bold uppercase tracking-wider">Zen Mode</span>
-            </button>
-
-            <button
-              onClick={() => setShowManual(true)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${isTerminalMode ? 'border-green-500 text-green-500 hover:bg-green-900/30' : 'border-stc-purple/20 text-stc-purple hover:bg-stc-purple hover:text-white'}`}
-              title="User Manual"
-            >
-              <span className="font-bold text-xs">?</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider">Manual</span>
             </button>
 
             <button
@@ -402,7 +408,35 @@ const App: React.FC = () => {
               )}
             </button>
 
+            <button
+              onClick={() => setShowManual(true)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${isTerminalMode ? 'border-green-500 text-green-500 hover:bg-green-900/30' : 'border-stc-purple/20 text-stc-purple hover:bg-stc-purple hover:text-white'}`}
+              title="User Manual"
+            >
+              <span className="font-bold text-xs">?</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">Manual</span>
+            </button>
+          </div>
 
+          <div className="flex items-center gap-4">
+            {/* Token Usage Meter */}
+            <div className={`flex items-center gap-2 text-[10px] font-mono select-none px-3 py-1 rounded border ${isTerminalMode ? 'text-green-500 bg-green-900/20 border-green-500/30' : 'text-stc-purple bg-stc-purple/5 border-stc-purple/10'}`}>
+              <span className="opacity-70 hidden xl:inline">CTX_WINDOW ({formatSize(contextWindowSize)})</span>
+              <span className="opacity-70 xl:hidden">CTX</span>
+              <div className={`w-24 h-1.5 rounded-full overflow-hidden ${isTerminalMode ? 'bg-green-900/30' : 'bg-gray-200'}`}>
+                <div
+                  className={`h-full transition-all duration-500 ${tokenColor}`}
+                  style={{ width: `${tokenPercent}%` }}
+                />
+              </div>
+              <span className={highlightClass}>{tokenUsage}t</span>
+            </div>
+
+            {/* Version */}
+            <div className={`flex items-center gap-2 text-[10px] font-mono select-none px-3 py-1 rounded border opacity-80 ${isTerminalMode ? 'text-green-500 bg-green-900/20 border-green-500/30' : 'text-stc-purple bg-stc-purple/5 border-stc-purple/10'}`}>
+              <span>v2.5.0</span>
+              <span className="font-bold">CORE</span>
+            </div>
           </div>
         </header>
 
@@ -457,12 +491,6 @@ const App: React.FC = () => {
           )}
         </div>
 
-        <Footer
-          isTerminalMode={isTerminalMode}
-          tokenUsage={tokenUsage}
-          contextWindowSize={config.contextWindowSize || DEFAULT_CONFIG.contextWindowSize}
-          enableVisualEffects={config.enableVisualEffects}
-        />
       </main>
     </div>
   );
