@@ -45,13 +45,24 @@ interface AdminPortalProps {
 }
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMode, embedded }) => {
-    const [activeTab, setActiveTab] = useState<'mission' | 'quality' | 'security' | 'logs'>('mission');
+    const [activeTab, setActiveTab] = useState<'mission' | 'quality' | 'security' | 'logs' | 'feedback'>('mission');
     const [logFilter, setLogFilter] = useState('ALL');
+    const [logSearch, setLogSearch] = useState('');
+    const [logLevel, setLogLevel] = useState('ALL');
     const [timeRange, setTimeRange] = useState<'1H' | '6H' | '24H' | '7D' | 'Custom'>('24H');
     const [golden, setGolden] = useState<GoldenSignals | null>(null);
     const [logs, setLogs] = useState<any[]>([]);
+    const [feedback, setFeedback] = useState<any[]>([]);
     const [securityEvents, setSecurityEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+
+    // Feature 4: Alerting State
+    const [alertConfig, setAlertConfig] = useState({
+        latency: 1000,
+        errorRate: 0.05,
+        successRate: 0.95
+    });
+    const [showAlertSettings, setShowAlertSettings] = useState(false);
 
     // Dynamic Trend Data State
     const [trendData, setTrendData] = useState<any[]>([]);
@@ -114,6 +125,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
     const [customStart, setCustomStart] = useState<number | null>(null);
     const [customEnd, setCustomEnd] = useState<number | null>(null);
 
+    const exportData = () => {
+        const data = activeTab === 'logs' ? logs : (activeTab === 'feedback' ? feedback : golden ? [golden] : []);
+        const filename = `report-${activeTab}-${new Date().toISOString()}.json`;
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
     const fetchSignals = async (isBackground = false) => {
         if (!isBackground) setLoading(true);
         if (!isBackground) setError(null);
@@ -140,10 +164,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
         try {
             try {
                 const params = `?start=${start}&end=${end}`;
-                const [statsRes, logRes, secRes] = await Promise.all([
+                const [statsRes, logRes, secRes, feedbackRes] = await Promise.all([
                     fetch(`/api/admin/stats/golden${params}`),
                     fetch(`/api/admin/logs${params}`),
-                    fetch(`/api/admin/security/events${params}`)
+                    fetch(`/api/admin/security/events${params}`),
+                    fetch(`/api/admin/feedback`) // Feedback is typically small volume, fetch all recent
                 ]);
 
                 if (statsRes.ok) {
@@ -159,6 +184,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
 
                 if (logRes.ok) setLogs(await logRes.json());
                 if (secRes.ok) setSecurityEvents(await secRes.json());
+                if (feedbackRes.ok) setFeedback(await feedbackRes.json());
             } catch (e: any) {
                 setGolden(null);
                 console.error(e);
@@ -180,8 +206,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
     const themeColor = isTerminalMode ? '#22c55e' : '#8b5cf6';
 
     // Reusable Stat Card - Redesigned for Density & Small Icons
-    const StatCard = ({ title, value, sub, trend, icon }: any) => (
-        <div className={`p-3 rounded-lg border backdrop-blur-md relative overflow-hidden group transition-all hover:scale-[1.01] ${isTerminalMode ? 'bg-green-900/10 border-green-500/20 hover:border-green-500/40' : 'bg-white/60 border-indigo-50 hover:border-indigo-200 hover:shadow-md'}`}>
+    const StatCard = ({ title, value, sub, trend, icon, alert }: any) => (
+        <div className={`p-3 rounded-lg border backdrop-blur-md relative overflow-hidden group transition-all hover:scale-[1.01] ${alert
+            ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)] animate-pulse'
+            : (isTerminalMode ? 'bg-green-900/10 border-green-500/20 hover:border-green-500/40' : 'bg-white/60 border-indigo-50 hover:border-indigo-200 hover:shadow-md')
+            }`}>
             <div className="flex justify-between items-start mb-1">
                 <h3 className="text-[10px] font-bold uppercase tracking-wider opacity-60 truncate pr-2">
                     {title}
@@ -229,7 +258,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                     )}
 
                     <div className="flex gap-1 p-0.5 rounded-lg border border-opacity-10 bg-opacity-5">
-                        {['mission', 'quality', 'security', 'logs'].map(tab => (
+                        {['mission', 'quality', 'security', 'logs', 'feedback'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab as any)}
@@ -242,6 +271,39 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                             </button>
                         ))}
                     </div>
+
+                    {/* Export Button */}
+                    <button
+                        onClick={exportData}
+                        className="ml-2 p-1.5 rounded hover:bg-black/5"
+                        title="Export Data (JSON)"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </button>
+
+                    {/* Alert Settings Trigger */}
+                    <button
+                        onClick={() => setShowAlertSettings(!showAlertSettings)}
+                        className={`ml-2 p-1.5 rounded hover:bg-black/5 ${showAlertSettings ? 'bg-black/5' : ''}`}
+                        title="Alert Settings"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+                    {showAlertSettings && (
+                        <div className={`absolute top-12 right-6 z-50 p-4 rounded-lg shadow-xl border w-64 ${isTerminalMode ? 'border-green-500 bg-black' : 'border-slate-200 bg-white'}`}>
+                            <h4 className="font-bold text-xs uppercase mb-3 opacity-80">Alert Thresholds</h4>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-[10px] font-bold block mb-1">Max Latency (ms)</label>
+                                    <input type="number" value={alertConfig.latency} onChange={e => setAlertConfig({ ...alertConfig, latency: parseInt(e.target.value) })} className={`w-full p-1 text-xs border rounded ${isTerminalMode ? 'bg-black border-green-500 text-green-500' : ''}`} />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold block mb-1">Min Success Rate (%)</label>
+                                    <input type="number" step="0.01" value={alertConfig.successRate} onChange={e => setAlertConfig({ ...alertConfig, successRate: parseFloat(e.target.value) })} className={`w-full p-1 text-xs border rounded ${isTerminalMode ? 'bg-black border-green-500 text-green-500' : ''}`} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right: Controls & Time Filter */}
@@ -318,16 +380,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                             />
                             <StatCard
                                 title="Avg Latency"
-                                value={`${Math.round(golden?.llm?.avg_latency || 0)}ms`}
-                                sub={`TTFT: ${Math.round(golden?.llm?.avg_ttft || 0)}ms`}
-                                trend={(golden?.llm?.avg_latency || 999) < 500 ? 'up' : 'down'}
-                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>}
+                                value={`${(golden?.llm?.avg_latency || 0).toFixed(0)} ms`}
+                                sub={`TTFT: ${(golden?.llm?.avg_ttft || 0).toFixed(0)}ms`}
+                                trend={(golden?.llm?.avg_latency || 0) > 800 ? 'up' : 'down'}
+                                alert={(golden?.llm?.avg_latency || 0) > alertConfig.latency}
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
                             />
                             <StatCard
                                 title="Success Rate"
                                 value={`${((golden?.llm?.success_rate || 0) * 100).toFixed(1)}%`}
-                                sub={`${golden?.llm?.total_requests || '--'} Reqs`}
-                                trend="up"
+                                sub={`${golden?.llm?.total_requests || 0} Requests`}
+                                trend={(golden?.llm?.success_rate || 0) > 0.95 ? 'up' : 'down'}
+                                alert={(golden?.llm?.success_rate || 1) < alertConfig.successRate}
                                 icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>}
                             />
                             <StatCard
@@ -559,23 +623,58 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                 )}
                 {activeTab === 'logs' && (
                     <div className={`border rounded-xl p-4 font-mono text-xs overflow-hidden h-[600px] flex flex-col ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'}`}>
-                        {/* Logs Content - Re-using logic... */}
-                        {/* Simplified for brevity in this refactor, keeping structure */}
-                        <div className="flex gap-4 mb-4">
-                            <select
-                                onChange={(e) => setLogFilter(e.target.value)}
-                                className={`px-2 py-1 rounded border bg-transparent ${isTerminalMode ? 'border-green-500/30 text-green-500' : 'border-slate-200 text-slate-700'}`}
-                            >
-                                <option value="ALL">All Services</option>
-                                <option value="api-gateway">API Gateway</option>
-                                <option value="frontend">Frontend</option>
-                                <option value="mcp-server">MCP Server</option>
-                            </select>
-                            <span className="opacity-50 self-center">{logs.filter(l => logFilter === 'ALL' || l.service === logFilter).length} Events</span>
+                        {/* Advanced Log Explorer Toolbar */}
+                        <div className="flex flex-col gap-3 mb-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold uppercase tracking-wider opacity-80">Log Explorer</h3>
+                                <span className="text-[10px] opacity-50">{logs.length} Events Loaded</span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-3">
+                                {/* Search Bar */}
+                                <div className={`flex items-center px-2 py-1.5 rounded border flex-1 min-w-[200px] ${isTerminalMode ? 'border-green-500/30 bg-black' : 'border-slate-200 bg-white'}`}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2 opacity-50"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    <input
+                                        type="text"
+                                        placeholder="Search message or metadata..."
+                                        className="bg-transparent border-none outline-none w-full text-xs"
+                                        onChange={(e) => setLogSearch(e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Service Filter */}
+                                <select
+                                    onChange={(e) => setLogFilter(e.target.value)}
+                                    className={`px-2 py-1.5 rounded border bg-transparent text-xs ${isTerminalMode ? 'border-green-500/30 text-green-500' : 'border-slate-200 text-slate-700'}`}
+                                >
+                                    <option value="ALL">All Services</option>
+                                    <option value="api-gateway">api-gateway</option>
+                                    <option value="frontend">frontend</option>
+                                    <option value="mcp-server">mcp-server</option>
+                                </select>
+
+                                {/* Severity Toggle */}
+                                <div className={`flex rounded border overflow-hidden ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'}`}>
+                                    {['INFO', 'WARN', 'ERROR'].map(lvl => (
+                                        <button
+                                            key={lvl}
+                                            onClick={() => setLogLevel(logLevel === lvl ? 'ALL' : lvl)}
+                                            className={`px-3 py-1.5 text-[10px] font-bold transition-colors ${logLevel === lvl
+                                                ? (lvl === 'ERROR' ? 'bg-red-500 text-white' : lvl === 'WARN' ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white')
+                                                : (isTerminalMode ? 'hover:bg-green-900/20' : 'hover:bg-slate-50')
+                                                }`}
+                                        >
+                                            {lvl}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Filter Logic */}
                         <div className="overflow-auto flex-1">
                             <table className="w-full text-left">
-                                <thead className="border-b opacity-50 sticky top-0 bg-inherit z-10">
+                                <thead className="border-b opacity-50 sticky top-0 bg-inherit z-10 shadow-sm">
                                     <tr>
                                         <th className="p-2">Time</th>
                                         <th className="p-2">Level</th>
@@ -585,13 +684,27 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                                 </thead>
                                 <tbody>
                                     {logs
-                                        .filter(log => logFilter === 'ALL' || log.service === logFilter)
+                                        .filter(log => {
+                                            const matchesService = logFilter === 'ALL' || log.service === logFilter;
+                                            const matchesLevel = logLevel === 'ALL' || log.level === logLevel;
+                                            const matchesSearch = !logSearch ||
+                                                log.message.toLowerCase().includes(logSearch.toLowerCase()) ||
+                                                JSON.stringify(log.metadata).toLowerCase().includes(logSearch.toLowerCase());
+                                            return matchesService && matchesLevel && matchesSearch;
+                                        })
                                         .map((log: any) => (
-                                            <tr key={log.id} className="border-b border-opacity-10 hover:bg-white/5">
-                                                <td className="p-2 opacity-60 whitespace-nowrap">{new Date(log.timestamp).toLocaleTimeString()}</td>
-                                                <td className={`p-2 font-bold ${log.level === 'ERROR' ? 'text-red-500' : 'text-blue-500'}`}>{log.level}</td>
+                                            <tr key={log.id} className="border-b border-opacity-10 hover:bg-white/5 transition-colors">
+                                                <td className="p-2 opacity-60 whitespace-nowrap text-[10px]">{new Date(log.timestamp).toLocaleString()}</td>
+                                                <td className="p-2">
+                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${log.level === 'ERROR' ? 'bg-red-500/20 text-red-500' :
+                                                        log.level === 'WARN' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                            'bg-blue-500/10 text-blue-500'
+                                                        }`}>
+                                                        {log.level}
+                                                    </span>
+                                                </td>
                                                 <td className="p-2 opacity-80">{log.service}</td>
-                                                <td className="p-2 truncate max-w-[300px]">{log.message}</td>
+                                                <td className="p-2 truncate max-w-[400px]" title={log.message}>{log.message}</td>
                                             </tr>
                                         ))}
                                 </tbody>
@@ -599,7 +712,37 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                         </div>
                     </div>
                 )}
+
+                {/* Feedback Tab */}
+                {activeTab === 'feedback' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {feedback.length > 0 ? feedback.map((fb: any) => (
+                                <div key={fb.id} className={`p-4 rounded-lg border flex flex-col gap-2 ${isTerminalMode ? 'border-green-500/30 bg-green-900/10' : 'border-slate-200 bg-white'}`}>
+                                    <div className="flex justify-between items-start">
+                                        <div className={`p-2 rounded-full ${fb.rating === 1 ? (isTerminalMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600') : (isTerminalMode ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-600')}`}>
+                                            {fb.rating === 1 ?
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg> :
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
+                                            }
+                                        </div>
+                                        <span className="text-[10px] opacity-50 font-mono">{new Date(fb.timestamp).toLocaleString()}</span>
+                                    </div>
+                                    <h4 className="text-xs font-bold uppercase opacity-80 mt-1">User Comment</h4>
+                                    <p className="text-sm italic opacity-90">{fb.comment || "No comment provided."}</p>
+                                    <div className="mt-auto px-2 py-1 rounded bg-black/5 text-[10px] font-mono opacity-50 truncate">
+                                        Msg ID: {fb.message_id}
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="col-span-full py-12 text-center opacity-50">
+                                    <p>No feedback details available.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
-        </div>
+        </div >
     );
 };

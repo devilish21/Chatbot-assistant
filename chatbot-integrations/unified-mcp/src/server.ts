@@ -485,3 +485,13 @@ app.get('/admin/metrics/tools', async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
+
+app.get('/admin/feedback', async (req, res) => {
+    try {
+        // ideally join with llm_metrics to get the query/response text later
+        const result = await query('SELECT * FROM user_feedback ORDER BY timestamp DESC LIMIT 100');
+        res.json(result.rows);
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
