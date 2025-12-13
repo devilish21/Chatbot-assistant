@@ -288,7 +288,7 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
                                 <span className={`text-xs font-bold tracking-wide uppercase ${isUser ? 'text-green-500' : 'text-green-700'}`}>{isUser ? 'USR_SHELL' : 'SYS_CORE'}</span>
                                 <div className="flex items-center gap-3">
                                     {!isUser && (
-                                        <button onClick={handleCopy} className="flex items-center gap-1 text-[9px] font-mono text-green-700 hover:text-green-500 transition-colors uppercase tracking-wider group/btn">
+                                        <button onClick={handleCopy} className="flex items-center gap-1 text-[9px] font-mono text-green-700 hover:text-green-500 transition-colors uppercase tracking-wider group/btn" aria-label="Copy message content">
                                             {isCopied ? <span>COPIED</span> : <span>COPY_RAW</span>}
                                         </button>
                                     )}
@@ -351,7 +351,7 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
                         )}
 
                         {!isUser && (
-                            <button onClick={handleCopy} className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={handleCopy} className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Copy message content">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stc-purple hover:text-stc-coral"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             </button>
                         )}
@@ -361,6 +361,7 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
                                 onClick={() => setIsEditing(true)}
                                 className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-stc-purple hover:text-stc-coral"
                                 title="Edit Message"
+                                aria-label="Edit message"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
                             </button>
