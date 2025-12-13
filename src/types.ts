@@ -39,6 +39,11 @@ export enum ChatStatus {
   ERROR = 'error',
 }
 
+export interface Category {
+  id: string;
+  count: number;
+}
+
 export interface SlashCommand {
   key: string;
   label: string;
@@ -66,6 +71,8 @@ export interface LLMRequestMetric {
   success: boolean;
   durationMs?: number;
   error?: string;
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 export interface ToolUsageMetric {

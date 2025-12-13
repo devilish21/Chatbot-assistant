@@ -23,9 +23,35 @@ interface OllamaMessage {
     }[];
 }
 
+
+let activeController: AbortController | null = null;
+
+export const cancelGeneration = () => {
+    if (activeController) {
+        activeController.abort();
+        activeController = null;
+    }
+};
+
 export async function* streamChatCompletion(messages: Message[], config: AppConfig) {
     const endpoint = config.endpoint || 'http://localhost:11434';
     const url = `${endpoint}/api/chat`;
+
+    // Cancel previous request if exists
+    if (activeController) {
+        activeController.abort();
+    }
+    activeController = new AbortController();
+    const signal = activeController.signal;
+
+    signal.addEventListener('abort', () => {
+        metricsService.trackLLMRequest({
+            model: config.model || 'llama3',
+            success: false,
+            error: 'ABANDONED_BY_USER',
+            durationMs: 0
+        });
+    });
 
     // Map internal tools to Ollama format
     // CRITICAL FIX: Only fetch and send tools if the Master Tool Switch (toolSafety) is ON.
@@ -86,9 +112,13 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                 response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: payloadString
+                    body: payloadString,
+                    signal: signal
                 });
             } catch (netErr: any) {
+                if (netErr.name === 'AbortError') {
+                    throw new Error('ABANDONED_BY_USER');
+                }
                 console.error("[OllamaService] Network Fetch Failed:", netErr);
                 // Check for common causes
                 if (netErr.name === 'TypeError' && netErr.message === 'Failed to fetch') {
@@ -111,7 +141,17 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
             const decoder = new TextDecoder();
             let isThinking = false;
 
+            const streamStartTime = Date.now();
+            let ttft = 0;
+
             console.log("[OllamaService] Stream started...");
+
+            // LOG USER REQUEST (For Admin Portal Logs)
+            const userPrompt = conversationHistory[conversationHistory.length - 1]?.content || 'unknown';
+            metricsService.logEvent('INFO', 'User Sent Message', {
+                prompt: userPrompt.substring(0, 200) + (userPrompt.length > 200 ? '...' : ''),
+                model: config.model
+            });
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -120,6 +160,12 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                     if (isThinking) yield '</think>';
                     break;
                 }
+
+                // Calculate TTFT on first chunk
+                if (ttft === 0) {
+                    ttft = Date.now() - streamStartTime;
+                }
+
                 // ... rest of stream logic
                 const chunk = decoder.decode(value, { stream: true });
                 const lines = chunk.split('\n');
@@ -136,19 +182,20 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                             });
                         }
 
-                        // Handle 'thinking'
+                        // Handle 'thinking' - SUPPRESSED BY USER REQUEST
                         if (json.message && json.message.thinking) {
-                            if (!isThinking) {
-                                yield '<think>';
-                                isThinking = true;
-                            }
-                            yield json.message.thinking;
+                            // if (!isThinking) {
+                            //     yield '<think>';
+                            //     isThinking = true;
+                            // }
+                            // yield json.message.thinking;
+                            // We strictly ignore thinking chunks now.
                         }
 
                         // Standard content
                         if (json.message && json.message.content) {
                             if (isThinking) {
-                                yield '</think>';
+                                // yield '</think>'; 
                                 isThinking = false;
                             }
                             const content = json.message.content;
@@ -157,7 +204,7 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                         }
 
                         if (json.done && isThinking) {
-                            yield '</think>';
+                            // yield '</think>';
                             isThinking = false;
                         }
 
@@ -183,13 +230,16 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
 
                     try {
                         console.log(`[OllamaService] Executing Tool: ${functionName}`);
+                        const toolStartTime = Date.now();
                         const result = await mcpService.callTool(functionName, functionArgs);
+                        const toolDuration = Date.now() - toolStartTime;
 
                         metricsService.trackToolUsage({
                             toolName: functionName,
                             service: 'unknown',
                             success: true,
-                            args: functionArgs
+                            args: functionArgs,
+                            durationMs: toolDuration
                         });
 
                         // Add result to history
@@ -219,8 +269,10 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
                 metricsService.trackLLMRequest({
                     model: config.model || 'llama3',
                     success: true,
-                    durationMs: Date.now() - startTime
+                    durationMs: Date.now() - startTime,
+                    ttftMs: ttft
                 });
+                activeController = null;
                 return;
             }
 
@@ -228,16 +280,23 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
             metricsService.trackLLMRequest({
                 model: config.model || 'llama3',
                 success: true,
-                durationMs: Date.now() - startTime
+                durationMs: Date.now() - startTime,
+                ttftMs: ttft
             });
 
         } catch (error: any) {
+            if (error.message === 'ABANDONED_BY_USER') {
+                activeController = null;
+                return; // Stop generator
+            }
+
             console.error("Ollama Service Error:", error);
 
             metricsService.trackLLMRequest({
                 model: config.model || 'llama3',
                 success: false,
-                error: error.message
+                error: error.message,
+                durationMs: Date.now() - startTime
             });
 
             if (error.message.includes('Failed to fetch') || error.message.includes('ECONNREFUSED')) {
@@ -246,6 +305,7 @@ export async function* streamChatCompletion(messages: Message[], config: AppConf
             throw error;
         }
     }
+    activeController = null;
 }
 
 export async function generateFollowUpQuestions(messages: Message[], config: AppConfig): Promise<string[]> {

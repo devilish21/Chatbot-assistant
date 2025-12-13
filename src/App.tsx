@@ -8,11 +8,13 @@ import { UserManual } from './components/UserManual';
 import { ToastContainer } from './components/Toast';
 import { PromptLibrary } from './components/PromptLibrary';
 import { AdminPanel } from './components/AdminPanel';
+import { AdminPortal } from './components/AdminPortal';
 import { AdminDashboard } from './components/AdminDashboard';
-import { AppConfig, ChatSession, Toast, Snippet } from './types';
+import { AppConfig, ChatSession, Toast, Snippet, Category } from './types';
 import { DEFAULT_CONFIG } from './constants';
 
 import { mcpService } from './services/mcpService';
+import { metricsService } from './services/metricsService';
 
 const STORAGE_KEY = 'devops_chatbot_sessions';
 const SNIPPETS_KEY = 'devops_chatbot_snippets';
@@ -34,8 +36,15 @@ const App: React.FC = () => {
   const [showDashboard, setShowDashboard] = useState(false);
   const [showPromptLibrary, setShowPromptLibrary] = useState(false);
 
+  useEffect(() => {
+    // Performance Telemetry
+    const loadTime = performance.now();
+    metricsService.trackSessionStart(loadTime, navigator.userAgent);
+  }, []);
+
   // Advanced Features State
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [demoInput, setDemoInput] = useState<string>('');
 
@@ -294,7 +303,6 @@ const App: React.FC = () => {
             { id: 'toggle', title: 'Toggle Terminal Mode', shortcut: ['T'], action: () => setIsTerminalMode(!isTerminalMode) },
             { id: 'manual', title: 'Open User Manual', shortcut: ['?'], action: () => setShowManual(true) },
             { id: 'admin', title: 'Admin Console (Settings)', action: () => setShowAdmin(true) },
-            { id: 'dashboard', title: 'System Dashboard (Metrics)', shortcut: ['D'], action: () => setShowDashboard(true) },
             { id: 'snippets', title: 'Open Prompt Library', shortcut: ['P'], action: () => setShowPromptLibrary(true) },
             ...sessions.map(s => ({
               id: s.id,
@@ -313,7 +321,10 @@ const App: React.FC = () => {
 
         {showDashboard && (
           <div className="fixed inset-0 z-[200] animate-in slide-in-from-bottom-10 duration-300">
-            <AdminDashboard onClose={() => setShowDashboard(false)} />
+            <AdminPortal
+              onClose={() => setShowDashboard(false)}
+              isTerminalMode={isTerminalMode}
+            />
           </div>
         )}
 
@@ -337,6 +348,7 @@ const App: React.FC = () => {
           onSaveConfig={(newConfig) => setConfig(newConfig)}
           isTerminalMode={isTerminalMode}
           addToast={addToast}
+          onOpenMetrics={() => setShowDashboard(true)}
         />
 
         <header className={`h-14 flex items-center px-6 justify-between backdrop-blur-md z-20 transition-colors duration-300 flex-shrink-0 ${headerClasses}`}>

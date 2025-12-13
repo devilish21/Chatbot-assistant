@@ -34,6 +34,12 @@ services:
       - BITBUCKET_CONFIG_PATH=/app/config/bitbucket.config.json
       - ELASTIC_CONFIG_PATH=/app/config/elasticsearch.config.json
       - GRAFANA_CONFIG_PATH=/app/config/grafana.config.json
+      # Database Config
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASS=adminpassword
+      - DB_NAME=devopsdb
     volumes:
       - ./chatbot-integrations/unified-mcp/config:/app/config:ro
     restart: always
@@ -41,6 +47,7 @@ services:
       - app-network
     depends_on:
       - jenkins
+      - postgres
     healthcheck:
       test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3009/health || exit 1" ]
       interval: 30s
@@ -58,9 +65,24 @@ services:
     volumes:
       - jenkins_home:/var/jenkins_home
 
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+      POSTGRES_DB: devopsdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
 
 volumes:
   jenkins_home:
+  postgres_data:
