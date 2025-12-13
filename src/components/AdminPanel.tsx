@@ -101,9 +101,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </nav>
                 </aside>
 
-                {/* Content Area */}
-                <main className="flex-1 overflow-y-auto p-8">
-                    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <main className={`flex-1 overflow-y-auto ${activeTab === 'metrics' ? 'p-4' : 'p-8'}`}>
+                    <div className={`${activeTab === 'metrics' ? 'w-full h-full' : 'max-w-4xl mx-auto'} space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300`}>
                         {activeTab === 'general' && (
                             <div className={cardClass}>
                                 <h3 className="text-xl font-bold mb-6 border-b pb-4 opacity-80">General Interface Settings</h3>
@@ -117,7 +116,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                         <button
                                             onClick={() => setLocalConfig({ ...localConfig, enableVisualEffects: !localConfig.enableVisualEffects })}
                                             className={`
-                                            relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none
+                                            relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none 
                                             ${localConfig.enableVisualEffects !== false
                                                     ? (isTerminalMode ? 'bg-green-500' : 'bg-stc-coral')
                                                     : (isTerminalMode ? 'bg-green-900/30' : 'bg-gray-300')}
@@ -258,18 +257,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             </div>
                         )}
 
-                        {/* Global Save Action */}
-                        <div className="flex justify-end pt-4">
-                            <button
-                                onClick={handleSave}
-                                className={`px-8 py-3 text-sm font-bold uppercase rounded-xl shadow-xl transition-transform transform hover:scale-105 active:scale-95 ${isTerminalMode
-                                    ? 'bg-green-500 text-black shadow-green-500/20'
-                                    : 'bg-stc-purple text-white hover:bg-stc-coral'
-                                    }`}
-                            >
-                                Save System Configuration
-                            </button>
-                        </div>
+                        {/* Global Save Action - Hidden on Metrics Tab */}
+                        {activeTab !== 'metrics' && (
+                            <div className="flex justify-end pt-4">
+                                <button
+                                    onClick={handleSave}
+                                    className={`px-8 py-3 text-sm font-bold uppercase rounded-xl shadow-xl transition-transform transform hover:scale-105 active:scale-95 ${isTerminalMode
+                                        ? 'bg-green-500 text-black shadow-green-500/20'
+                                        : 'bg-stc-purple text-white hover:bg-stc-coral'
+                                        }`}
+                                >
+                                    Save System Configuration
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </main>
             </div>

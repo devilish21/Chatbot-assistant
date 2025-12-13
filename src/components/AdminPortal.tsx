@@ -47,6 +47,7 @@ interface AdminPortalProps {
 export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMode, embedded }) => {
     const [activeTab, setActiveTab] = useState<'mission' | 'quality' | 'security' | 'logs'>('mission');
     const [logFilter, setLogFilter] = useState('ALL');
+    const [timeRange, setTimeRange] = useState<'1H' | '6H' | '24H' | '7D'>('1H');
     const [golden, setGolden] = useState<GoldenSignals | null>(null);
     const [logs, setLogs] = useState<any[]>([]);
     const [securityEvents, setSecurityEvents] = useState<any[]>([]);
@@ -55,17 +56,26 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
     // Dynamic Trend Data State
     const [trendData, setTrendData] = useState<any[]>([]);
 
-    // Generate a realistic looking data point based on previous
-    const generateDataPoint = (prev: any, index: number) => {
+    // Generate simulated data points based on time range
+    const generateDataPoint = (prev: any, index: number, range: string) => {
         const time = new Date();
-        time.setSeconds(time.getSeconds() + (index * 5)); // staggering for init
-        const timeStr = time.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        // Adjust timestamp back based on index and range granularity
+        let timeOffset = 0;
+        if (range === '1H') timeOffset = index * 2 * 60 * 1000; // 2 min intervals
+        else if (range === '6H') timeOffset = index * 10 * 60 * 1000;
+        else if (range === '24H') timeOffset = index * 30 * 60 * 1000;
+        else if (range === '7D') timeOffset = index * 4 * 60 * 60 * 1000;
+
+        time.setTime(time.getTime() - (20 * (range === '1H' ? 120000 : range === '6H' ? 600000 : range === '24H' ? 1800000 : 14400000)) + timeOffset);
+
+        const timeStr = range === '7D'
+            ? time.toLocaleDateString([], { month: 'numeric', day: 'numeric', hour: '2-digit' })
+            : time.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
 
         const baseLatency = 400;
         const baseTTFT = 120;
         const baseUsers = 15;
 
-        // Add some random noise
         const latency = Math.max(200, baseLatency + (Math.random() * 200 - 100));
         const ttft = Math.max(50, baseTTFT + (Math.random() * 50 - 25));
         const users = Math.max(5, Math.floor(baseUsers + (Math.random() * 10 - 5)));
@@ -79,90 +89,102 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
         };
     };
 
-    // Initialize Data
+    // Initialize & Update Data
     useEffect(() => {
         const initialData = [];
         for (let i = 0; i < 20; i++) {
-            initialData.push(generateDataPoint({}, i));
+            initialData.push(generateDataPoint({}, i, timeRange));
         }
         setTrendData(initialData);
 
-        const interval = setInterval(() => {
-            setTrendData(prev => {
-                const last = prev[prev.length - 1];
-                const next = generateDataPoint(last, 1);
-                // Keep last 20 points
-                return [...prev.slice(1), next];
-            });
-        }, 2000); // Update every 2s
+        // Only auto-update if range is short (1H), otherwise static snapshot for logic simplicity in mock
+        if (timeRange === '1H') {
+            const interval = setInterval(() => {
+                setTrendData(prev => {
+                    const next = generateDataPoint({}, 20, '1H'); // Generate "next" point relative to now
+                    next.time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    return [...prev.slice(1), next];
+                });
+            }, 2000);
+            return () => clearInterval(interval);
+        }
+    }, [timeRange]);
 
-        return () => clearInterval(interval);
-    }, []);
+    const [error, setError] = useState<string | null>(null);
 
-    const fetchSignals = async () => {
-        setLoading(true);
+    const fetchSignals = async (isBackground = false) => {
+        if (!isBackground) setLoading(true);
+        // Clear error only on manual refresh (not background polling) to avoid flickering error -> success
+        if (!isBackground) setError(null);
+
         try {
-            // In a real app these would be real endpoints. 
-            // For now we simulate successful fetches with mock golden signals if the fetch fails (or no backend).
-            const mockGolden: GoldenSignals = {
-                llm: { total_requests: '15.4K', avg_latency: 420, avg_ttft: 115, success_rate: 0.995 },
-                tools: { total_tools: '8.2K', success_rate: 0.98, timeout_rate: 0.01, avg_tool_latency: 850 },
-                systemErrors: { ERROR: 2, WARN: 14 },
-                users: { dau: '1,240', sessions: '4,502', avg_prompts_per_session: '8.4', returning_user_rate: '0.65', avg_ui_load_time: 320 },
-                cost: { total_usd: 142.50, cost_per_user: '0.11', input_tokens: 45000000 },
-                quality: { grounded_rate: 0.92, satisfaction_score: '0.94' },
-                security: { incidents: '0' },
-                toolAdoption: [
-                    { tool_name: 'Jenkins', unique_users: '840' },
-                    { tool_name: 'Jira', unique_users: '620' },
-                    { tool_name: 'SonarQube', unique_users: '410' },
-                    { tool_name: 'K8s', unique_users: '350' }
-                ]
-            };
-
-            setGolden(mockGolden);
-
-            // Try fetching real if available (this will fail in dev usually, so we fallback or rely on the lines above)
             try {
-                const [goldRes, logRes, secRes] = await Promise.all([
+                const [statsRes, logRes, secRes] = await Promise.all([
                     fetch('/api/admin/stats/golden'),
                     fetch('/api/admin/logs'),
                     fetch('/api/admin/security/events')
                 ]);
-                if (goldRes.ok) setGolden(await goldRes.json());
+
+                if (statsRes.ok) {
+                    const data = await statsRes.json();
+                    setGolden(data);
+                    // If we got data successfully, clear any previous errors
+                    setError(null);
+                } else {
+                    setGolden(null);
+                    if (statsRes.status === 404) setError("Metrics endpoint not found (404)");
+                    else if (statsRes.status === 500) setError("Internal Server Error (500)");
+                    else setError(`Failed to load metrics: ${statsRes.statusText}`);
+                }
+
                 if (logRes.ok) setLogs(await logRes.json());
                 if (secRes.ok) setSecurityEvents(await secRes.json());
-            } catch (ignore) { /* using mock */ }
-
+            } catch (e: any) {
+                setGolden(null);
+                console.error(e);
+                setError("Connection refused. Backend may be offline.");
+            }
         } catch (e) {
             console.error("Failed to fetch signals", e);
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
     useEffect(() => {
         fetchSignals();
-    }, []);
+        const interval = setInterval(() => fetchSignals(true), 5000);
+        return () => clearInterval(interval);
+    }, [timeRange]);
 
-    const themeColor = isTerminalMode ? '#22c55e' : '#8b5cf6'; // Green vs Purple
+    const themeColor = isTerminalMode ? '#22c55e' : '#8b5cf6';
 
-    // Reusable Stat Card
+    // Reusable Stat Card - Redesigned for Density & Small Icons
     const StatCard = ({ title, value, sub, trend, icon }: any) => (
-        <div className={`p-4 rounded-xl border backdrop-blur-md relative overflow-hidden transition-all hover:scale-[1.02] ${isTerminalMode ? 'bg-green-900/10 border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'bg-white/60 border-indigo-100 shadow-lg shadow-indigo-500/5'}`}>
-            <div className={`absolute top-0 right-0 p-3 opacity-10 ${isTerminalMode ? 'text-green-500' : 'text-indigo-600'}`}>
-                {icon || <svg width="60" height="60" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" /></svg>}
+        <div className={`p-3 rounded-lg border backdrop-blur-md relative overflow-hidden group transition-all hover:scale-[1.01] ${isTerminalMode ? 'bg-green-900/10 border-green-500/20 hover:border-green-500/40' : 'bg-white/60 border-indigo-50 hover:border-indigo-200 hover:shadow-md'}`}>
+            <div className="flex justify-between items-start mb-1">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider opacity-60 truncate pr-2">
+                    {title}
+                </h3>
+                <div className={`p-1 rounded-md opacity-70 group-hover:opacity-100 transition-opacity ${isTerminalMode ? 'text-green-500 bg-green-500/10' : 'text-indigo-500 bg-indigo-50'}`}>
+                    {/* Clone element to force small size if it's a raw SVG, or render as is if responsive */}
+                    {React.cloneElement(icon as React.ReactElement, { width: 16, height: 16, className: 'w-4 h-4' })}
+                </div>
             </div>
-            <h3 className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1 flex items-center gap-2">
-                {title}
-            </h3>
-            <div className="text-3xl font-bold font-mono tracking-tight">{value}</div>
-            <div className="flex items-center gap-2 mt-2">
-                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${trend === 'up'
-                    ? (isTerminalMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700')
-                    : (isTerminalMode ? 'bg-red-500/20 text-red-500' : 'bg-red-100 text-red-700')}`}>
-                    {trend === 'up' ? '▲' : '▼'} {sub}
-                </span>
+
+            <div className="flex items-baseline gap-2 mt-1">
+                <div className="text-2xl font-bold font-mono tracking-tight leading-none">{value}</div>
+                {sub && (
+                    <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1 ${trend === 'up'
+                        ? (isTerminalMode ? 'bg-green-500/10 text-green-400' : 'bg-green-50 text-green-600')
+                        : trend === 'down'
+                            ? (isTerminalMode ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-600')
+                            : 'opacity-50'}`}>
+                        {trend === 'up' && '▲'}
+                        {trend === 'down' && '▼'}
+                        <span className="truncate max-w-[80px]">{sub}</span>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -174,264 +196,301 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
     return (
         <div className={containerClasses + " font-sans"}>
 
-            {/* Header - Only Show if NOT embedded */}
-            {!embedded && (
-                <div className={`h-16 px-6 flex items-center justify-between border-b ${isTerminalMode ? 'border-green-500/30 bg-black' : 'border-slate-200 bg-white'}`}>
-                    <div className="flex items-center gap-4">
-                        <div className={`w-3 h-3 rounded-full animate-pulse ${isTerminalMode ? 'bg-green-500' : 'bg-stc-purple'}`}></div>
-                        <h1 className="font-bold text-xl tracking-widest uppercase">Mission Control</h1>
-                    </div>
+            {/* Header / Top Bar */}
+            <div className={`px-6 h-14 flex items-center justify-between border-b shrink-0 ${isTerminalMode ? 'border-green-500/20 bg-black/40' : 'border-slate-200 bg-white/80'}`}>
 
-                    <div className="flex gap-1 p-1 rounded-lg border border-opacity-20">
+                {/* Left: Branding or Tabs */}
+                <div className="flex items-center gap-4">
+                    {!embedded && (
+                        <div className="flex items-center gap-2 mr-4">
+                            <div className={`w-2 h-2 rounded-full animate-pulse ${isTerminalMode ? 'bg-green-500' : 'bg-stc-purple'}`}></div>
+                            <h1 className="font-bold text-sm tracking-widest uppercase">Mission Control</h1>
+                        </div>
+                    )}
+
+                    <div className="flex gap-1 p-0.5 rounded-lg border border-opacity-10 bg-opacity-5">
                         {['mission', 'quality', 'security', 'logs'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab as any)}
-                                className={`px-4 py-2 text-xs font-bold uppercase rounded transition-all ${activeTab === tab
-                                    ? (isTerminalMode ? 'bg-green-500 text-black' : 'bg-stc-purple text-white shadow-lg')
-                                    : 'opacity-60 hover:opacity-100'
+                                className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${activeTab === tab
+                                    ? (isTerminalMode ? 'bg-green-500 text-black shadow-sm' : 'bg-stc-purple text-white shadow-sm')
+                                    : 'opacity-50 hover:opacity-100'
                                     }`}
                             >
                                 {tab}
                             </button>
                         ))}
                     </div>
+                </div>
 
-                    <div className="flex items-center gap-4">
-                        <span className="text-xs font-mono opacity-60">LIVE FEED</span>
-                        <button onClick={onClose} className="p-2 hover:bg-red-500/10 rounded-full transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                        </button>
+                {/* Right: Controls & Time Filter */}
+                <div className="flex items-center gap-3">
+                    {/* Time Range Selector */}
+                    <div className={`flex items-center rounded-md border text-[10px] font-bold overflow-hidden ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'}`}>
+                        {['1H', '6H', '24H', '7D'].map(range => (
+                            <button
+                                key={range}
+                                onClick={() => setTimeRange(range as any)}
+                                className={`px-3 py-1.5 transition-colors ${timeRange === range
+                                    ? (isTerminalMode ? 'bg-green-500/20 text-green-400' : 'bg-indigo-50 text-indigo-600')
+                                    : (isTerminalMode ? 'hover:bg-green-900/20 text-green-700' : 'hover:bg-slate-50 text-slate-400')}`}
+                            >
+                                {range}
+                            </button>
+                        ))}
                     </div>
-                </div>
-            )}
 
-            {/* Embedded Tabs (If Embedded) */}
-            {embedded && (
-                <div className="mb-6 flex gap-2">
-                    {['mission', 'quality', 'security', 'logs'].map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab as any)}
-                            className={`px-4 py-2 text-xs font-bold uppercase rounded-lg border transition-all ${activeTab === tab
-                                ? (isTerminalMode ? 'bg-green-500 text-black border-green-500' : 'bg-stc-purple text-white border-stc-purple shadow-md')
-                                : (isTerminalMode ? 'text-green-700 border-green-900/30 hover:bg-green-900/20' : 'text-slate-500 border-slate-200 hover:bg-slate-100')
-                                }`}
-                        >
-                            {tab}
+                    {!embedded && (
+                        <button onClick={onClose} className="p-1.5 hover:bg-red-500/10 rounded-full transition-colors opacity-60 hover:opacity-100">
+                            <svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
                         </button>
-                    ))}
+                    )}
                 </div>
-            )}
+            </div>
 
             {/* Dashboard Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
-                {activeTab === 'mission' && golden && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                {activeTab === 'mission' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
 
-                        {/* Golden Signals Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <StatCard
-                                title="24h Active Users"
-                                value={golden.users?.dau || '0'}
-                                sub={`${golden.users?.sessions || 0} Sessions`}
-                                trend="up"
-                                icon={<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>}
-                            />
-                            <StatCard
-                                title="Engagement Depth"
-                                value={golden.users?.avg_prompts_per_session || '0.0'}
-                                sub="Prompts / Session"
-                                trend="up"
-                                icon={<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>}
-                            />
-                            <StatCard
-                                title="Returning Users"
-                                value={`${(Number(golden.users?.returning_user_rate || 0) * 100).toFixed(0)}%`}
-                                sub="Retention Rate"
-                                trend={Number(golden.users?.returning_user_rate) > 0.2 ? 'up' : 'down'}
-                                icon={<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>}
-                            />
-                            <StatCard
-                                title="UI Load Time"
-                                value={`${golden.users?.avg_ui_load_time || 0}ms`}
-                                sub="First Contentful Paint"
-                                trend={golden.users?.avg_ui_load_time && golden.users.avg_ui_load_time < 500 ? 'up' : 'down'}
-                                icon={<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>}
-                            />
-                            <StatCard
-                                title="Est. Cost (USD)"
-                                value={`$${(golden.cost?.total_usd || 0).toFixed(4)}`}
-                                sub={`$${golden.cost?.cost_per_user || 0} / User`}
-                                trend="up"
-                                icon={<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>}
-                            />
-                            <StatCard
-                                title="System Errors"
-                                value={golden.systemErrors?.ERROR || 0}
-                                sub={`${golden.systemErrors?.WARN || 0} Warnings`}
-                                trend="down"
-                                icon={<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>}
-                            />
-                        </div>
-
-                        {/* Additional Metrics Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <StatCard
-                                title="Avg Latency (E2E)"
-                                value={`${Math.round(golden.llm.avg_latency || 0)}ms`}
-                                sub={`TTFT: ${Math.round(golden.llm.avg_ttft || 0)}ms`}
-                                trend={golden.llm.avg_latency < 2000 ? 'up' : 'down'}
-                                icon={<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>}
-                            />
-                            <StatCard
-                                title="User Satisfaction"
-                                value={`${(Number(golden.quality?.satisfaction_score || 0) * 100).toFixed(0)}%`}
-                                sub="Positive Feedback"
-                                trend={Number(golden.quality?.satisfaction_score) > 0.8 ? 'up' : 'down'}
-                                icon={<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>}
-                            />
-                            <StatCard
-                                title="Security Incidents"
-                                value={golden.security?.incidents || 0}
-                                sub="Auth/Policy Events"
-                                trend={Number(golden.security?.incidents) === 0 ? 'up' : 'down'}
-                                icon={<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>}
-                            />
-                            <StatCard
-                                title="MCP Reliability"
-                                value={`${(Number(golden.tools.success_rate || 0) * 100).toFixed(1)}%`}
-                                sub={`Timeout Rate: ${(Number(golden.tools.timeout_rate || 0) * 100).toFixed(1)}%`}
-                                trend="up"
-                                icon={<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>}
-                            />
-                        </div>
-
-                        {/* Tool Adoption Table */}
-                        <div className={`p-4 rounded-xl border ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'}`}>
-                            <h3 className="text-xs font-bold uppercase mb-4 opacity-70">Tool Adoption (Active Users)</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {golden.toolAdoption?.map((t: any) => (
-                                    <div key={t.tool_name} className="flex justify-between items-center p-2 rounded bg-opacity-10 bg-gray-500">
-                                        <span className="text-xs font-mono truncate max-w-[100px]">{t.tool_name}</span>
-                                        <span className="font-bold">{t.unique_users} Users</span>
-                                    </div>
-                                ))}
+                        {/* Error / Status Banner */}
+                        {error && (
+                            <div className={`p-3 rounded-lg border flex items-center gap-3 ${isTerminalMode ? 'bg-red-900/20 border-red-500/50 text-red-400' : 'bg-red-50 border-red-200 text-red-600'}`}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                                <span className="text-xs font-bold">{error}</span>
                             </div>
+                        )}
+
+                        {!error && !golden && (
+                            <div className={`p-3 rounded-lg border flex items-center gap-3 ${isTerminalMode ? 'bg-yellow-900/20 border-yellow-500/50 text-yellow-500' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+                                <span className="text-xs font-bold">No active data streams available. Waiting for traffic...</span>
+                            </div>
+                        )}
+
+                        {/* Dense Golden Signals Grid */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <StatCard
+                                title="Active Users"
+                                value={golden?.users?.dau || '--'}
+                                sub={`${golden?.users?.sessions || '--'} Sessions`}
+                                trend="up"
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>}
+                            />
+                            <StatCard
+                                title="Avg Latency"
+                                value={`${Math.round(golden?.llm?.avg_latency || 0)}ms`}
+                                sub={`TTFT: ${Math.round(golden?.llm?.avg_ttft || 0)}ms`}
+                                trend={(golden?.llm?.avg_latency || 999) < 500 ? 'up' : 'down'}
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>}
+                            />
+                            <StatCard
+                                title="Success Rate"
+                                value={`${((golden?.llm?.success_rate || 0) * 100).toFixed(1)}%`}
+                                sub={`${golden?.llm?.total_requests || '--'} Reqs`}
+                                trend="up"
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>}
+                            />
+                            <StatCard
+                                title="Est. Cost"
+                                value={`$${(golden?.cost?.total_usd || 0).toFixed(2)}`}
+                                sub={`$${golden?.cost?.cost_per_user || 0}/user`}
+                                trend="up"
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>}
+                            />
+                            <StatCard
+                                title="Input Tokens"
+                                value={golden?.cost?.input_tokens?.toLocaleString() || '0'}
+                                sub="Total Processed"
+                                trend="up"
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>}
+                            />
+
+                            {/* Second Row - Restored Metrics */}
+                            <StatCard
+                                title="Engagement"
+                                value={golden?.users?.avg_prompts_per_session || '--'}
+                                sub="Prompts/Session"
+                                trend="up"
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>}
+                            />
+                            <StatCard
+                                title="Retention"
+                                value={`${(Number(golden?.users?.returning_user_rate || 0) * 100).toFixed(0)}%`}
+                                sub="Returning Users"
+                                trend="up"
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>}
+                            />
+                            <StatCard
+                                title="UI Performance"
+                                value={`${golden?.users?.avg_ui_load_time || 0}ms`}
+                                sub="Load Time"
+                                trend="down"
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
+                            />
+                            <StatCard
+                                title="MCP Tools"
+                                value={`${((golden?.tools?.success_rate || 0) * 100).toFixed(0)}%`}
+                                sub={`Avg Latency: ${golden?.tools?.avg_tool_latency || 0}ms`}
+                                trend="up"
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>}
+                            />
                         </div>
 
-                        {/* Charts Row */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[400px]">
+                        {/* Main Interaction Area: Charts & Activity */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[320px]">
 
-                            {/* Latency & TTFT Trend */}
-                            <div className={`rounded-xl border p-4 flex flex-col ${isTerminalMode ? 'border-green-500/30 bg-green-900/5' : 'bg-white border-slate-200'}`}>
-                                <h3 className="text-xs font-bold uppercase mb-4 opacity-70">Responsiveness Trend</h3>
+                            {/* Primary Chart: Latency Trend */}
+                            <div className={`col-span-2 rounded-lg border p-3 flex flex-col ${isTerminalMode ? 'border-green-500/20 bg-black/40' : 'bg-white border-slate-200'}`}>
+                                <h3 className="text-[10px] font-bold uppercase mb-2 opacity-60 flex justify-between">
+                                    <span>System Responsiveness ({timeRange})</span>
+                                    <span className="opacity-100 text-green-500">Live</span>
+                                </h3>
                                 <div className="flex-1 min-h-0">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={trendData}>
                                             <defs>
                                                 <linearGradient id="colorLatency" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor={themeColor} stopOpacity={0.3} />
+                                                    <stop offset="5%" stopColor={themeColor} stopOpacity={0.2} />
                                                     <stop offset="95%" stopColor={themeColor} stopOpacity={0} />
                                                 </linearGradient>
                                             </defs>
-                                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.1} />
-                                            <XAxis dataKey="time" strokeOpacity={0.5} fontSize={10} minTickGap={30} />
-                                            <YAxis strokeOpacity={0.5} fontSize={10} />
-                                            <Tooltip
-                                                contentStyle={{ backgroundColor: isTerminalMode ? '#000' : '#fff', borderColor: themeColor }}
-                                                itemStyle={{ color: isTerminalMode ? '#22c55e' : '#333' }}
-                                                labelStyle={{ color: isTerminalMode ? '#22c55e' : '#666' }}
+                                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.05} vertical={false} />
+                                            <XAxis
+                                                dataKey="time"
+                                                strokeOpacity={0.3}
+                                                fontSize={9}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                minTickGap={40}
                                             />
-                                            <Area type="monotone" dataKey="latency" stroke={themeColor} fillOpacity={1} fill="url(#colorLatency)" isAnimationActive={false} />
-                                            <Area type="monotone" dataKey="ttft" stroke="#f59e0b" fillOpacity={0} strokeDasharray="3 3" isAnimationActive={false} />
+                                            <YAxis
+                                                strokeOpacity={0.3}
+                                                fontSize={9}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                width={30}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: isTerminalMode ? 'rgba(0,0,0,0.9)' : 'rgba(255,255,255,0.95)',
+                                                    borderColor: isTerminalMode ? '#333' : '#eee',
+                                                    fontSize: '11px',
+                                                    borderRadius: '6px',
+                                                    padding: '8px'
+                                                }}
+                                                itemStyle={{ padding: 0 }}
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="latency"
+                                                stroke={themeColor}
+                                                strokeWidth={2}
+                                                fillOpacity={1}
+                                                fill="url(#colorLatency)"
+                                                isAnimationActive={true}
+                                            />
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
                             </div>
 
-                            {/* User Activity Stub */}
-                            <div className={`rounded-xl border p-4 flex flex-col ${isTerminalMode ? 'border-green-500/30 bg-green-900/5' : 'bg-white border-slate-200'}`}>
-                                <h3 className="text-xs font-bold uppercase mb-4 opacity-70">Active Sessions (DAU)</h3>
-                                <div className="flex-1 min-h-0">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={trendData}>
-                                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.1} />
-                                            <XAxis dataKey="time" strokeOpacity={0.5} fontSize={10} minTickGap={30} />
-                                            <YAxis strokeOpacity={0.5} fontSize={10} />
-                                            <Tooltip
-                                                cursor={{ fill: 'transparent' }}
-                                                contentStyle={{ backgroundColor: isTerminalMode ? '#000' : '#fff', borderColor: themeColor }}
-                                            />
-                                            <Bar dataKey="users" fill={themeColor} radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                            {/* Secondary Column: Adoption & Health */}
+                            <div className="space-y-3 flex flex-col">
+                                {/* Tool Adoption List - Compact */}
+                                <div className={`flex-1 rounded-lg border p-3 overflow-hidden flex flex-col ${isTerminalMode ? 'border-green-500/20 bg-black/40' : 'bg-white border-slate-200'}`}>
+                                    <h3 className="text-[10px] font-bold uppercase mb-3 opacity-60">Top Tools</h3>
+                                    <div className="space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                                        {golden?.toolAdoption?.map((t: any, idx: number) => (
+                                            <div key={t.tool_name} className="flex items-center justify-between group">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-[10px] w-4 h-4 rounded text-center leading-4 font-bold ${isTerminalMode ? 'bg-green-900/40 text-green-400' : 'bg-indigo-50 text-indigo-600'}`}>{idx + 1}</span>
+                                                    <span className="text-xs font-mono opacity-80">{t.tool_name}</span>
+                                                </div>
+                                                <div className="text-xs font-bold">{t.unique_users}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Health Status - Compact */}
+                                <div className={`h-24 rounded-lg border p-3 flex flex-col justify-center gap-2 ${isTerminalMode ? 'border-red-900/30 bg-red-900/5' : 'bg-red-50/50 border-red-100'}`}>
+                                    <div className="flex items-center gap-2 text-red-500">
+                                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                        <span className="text-xs font-bold uppercase">System Health</span>
+                                    </div>
+                                    <div className="flex justify-between items-end">
+                                        <div className="text-xl font-bold font-mono">{golden?.systemErrors?.ERROR || 0}</div>
+                                        <div className="text-[10px] opacity-60">Critical Errors</div>
+                                    </div>
+                                    <div className="w-full bg-red-500/20 h-1 rounded-full">
+                                        <div className="bg-red-500 h-1 rounded-full" style={{ width: '15%' }}></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Recent Alerts */}
-                        <div className={`p-4 rounded-xl border ${isTerminalMode ? 'border-red-500/30 bg-red-900/5' : 'bg-red-50 border-red-100'}`}>
-                            <h3 className="text-xs font-bold uppercase text-red-500 mb-2">Systems Health</h3>
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-mono">{golden.systemErrors?.ERROR || 0} Critical Error(s) & {golden.systemErrors?.WARN || 0} Warnings in last 24h</span>
-                                <button className="text-xs underline opacity-70 hover:opacity-100">View Logs</button>
-                            </div>
-                        </div>
-
                     </div>
                 )}
 
-                {activeTab === 'quality' && golden && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                {/* Quality Tab */}
+                {activeTab === 'quality' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <StatCard
                                 title="Response Groundedness"
-                                value={`${(Number(golden.quality?.grounded_rate || 0) * 100).toFixed(1)}%`}
+                                value={`${(Number(golden?.quality?.grounded_rate || 0) * 100).toFixed(1)}%`}
                                 sub="Tool-verified facts"
-                                trend={Number(golden.quality?.grounded_rate) > 0.8 ? 'up' : 'down'}
+                                trend={Number(golden?.quality?.grounded_rate || 0) > 0.8 ? 'up' : 'down'}
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>}
                             />
                             <StatCard
                                 title="User Satisfaction"
-                                value={`${(Number(golden.quality?.satisfaction_score || 0) * 100).toFixed(0)}%`}
+                                value={`${(Number(golden?.quality?.satisfaction_score || 0) * 100).toFixed(0)}%`}
                                 sub="Positive Feedback Rate"
-                                trend={Number(golden.quality?.satisfaction_score) > 0.8 ? 'up' : 'down'}
+                                trend={Number(golden?.quality?.satisfaction_score || 0) > 0.8 ? 'up' : 'down'}
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></svg>}
                             />
                             <StatCard
                                 title="Completion Success"
-                                value={`${(Number(golden.llm.success_rate || 0) * 100).toFixed(1)}%`}
+                                value={`${(Number(golden?.llm?.success_rate || 0) * 100).toFixed(1)}%`}
                                 sub="Error-free responses"
                                 trend="up"
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
                             />
                         </div>
 
-                        <div className={`p-6 rounded-xl border ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'} text-center opacity-70`}>
-                            <h3 className="font-bold uppercase mb-2">Hallucination Analysis</h3>
-                            <p className="text-sm">Detailed semantic analysis and fact-checking module coming in Phase 5.</p>
+                        <div className={`p-6 rounded-lg border ${isTerminalMode ? 'border-green-500/20 bg-green-900/5' : 'border-slate-200 bg-slate-50'} text-center opacity-70`}>
+                            <h3 className="font-bold uppercase mb-2 text-xs">Hallucination Analysis</h3>
+                            <p className="text-sm font-mono">Detailed semantic analysis and fact-checking module coming in Phase 5.</p>
                         </div>
                     </div>
                 )}
 
+                {/* Security Tab */}
                 {activeTab === 'security' && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <StatCard
                                 title="Total Incidents"
                                 value={golden?.security?.incidents || '0'}
                                 sub="All-time Security Events"
                                 trend={Number(golden?.security?.incidents) === 0 ? 'up' : 'down'}
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>}
                             />
                             <StatCard
                                 title="Policy Violations"
                                 value="0"
                                 sub="RBAC / Tool Policy"
                                 trend="up"
+                                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>}
                             />
                         </div>
 
-                        <div className={`border rounded-xl p-4 font-mono text-xs overflow-auto ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'}`}>
-                            <h3 className="text-xs font-bold uppercase mb-4 opacity-70">Security Event Log</h3>
+                        <div className={`border rounded-lg p-4 font-mono text-xs overflow-auto h-[400px] ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'}`}>
+                            <h3 className="text-[10px] font-bold uppercase mb-4 opacity-70">Security Event Log</h3>
                             <table className="w-full text-left">
                                 <thead className="border-b opacity-50">
                                     <tr>
@@ -461,10 +520,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                         </div>
                     </div>
                 )}
-
                 {activeTab === 'logs' && (
                     <div className={`border rounded-xl p-4 font-mono text-xs overflow-hidden h-[600px] flex flex-col ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'}`}>
-                        {/* Filter Bar */}
+                        {/* Logs Content - Re-using logic... */}
+                        {/* Simplified for brevity in this refactor, keeping structure */}
                         <div className="flex gap-4 mb-4">
                             <select
                                 onChange={(e) => setLogFilter(e.target.value)}
@@ -477,7 +536,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                             </select>
                             <span className="opacity-50 self-center">{logs.filter(l => logFilter === 'ALL' || l.service === logFilter).length} Events</span>
                         </div>
-
                         <div className="overflow-auto flex-1">
                             <table className="w-full text-left">
                                 <thead className="border-b opacity-50 sticky top-0 bg-inherit z-10">
@@ -485,7 +543,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                                         <th className="p-2">Time</th>
                                         <th className="p-2">Level</th>
                                         <th className="p-2">Service</th>
-                                        <th className="p-2">Status</th>
                                         <th className="p-2">Message</th>
                                     </tr>
                                 </thead>
@@ -494,28 +551,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                                         .filter(log => logFilter === 'ALL' || log.service === logFilter)
                                         .map((log: any) => (
                                             <tr key={log.id} className="border-b border-opacity-10 hover:bg-white/5">
-                                                <td className="p-2 opacity-60 whitespace-nowrap">
-                                                    {new Date(log.timestamp).toLocaleTimeString()}
-                                                </td>
-                                                <td className={`p-2 font-bold ${log.level === 'ERROR' ? 'text-red-500' : 'text-blue-500'}`}>
-                                                    {log.level}
-                                                </td>
+                                                <td className="p-2 opacity-60 whitespace-nowrap">{new Date(log.timestamp).toLocaleTimeString()}</td>
+                                                <td className={`p-2 font-bold ${log.level === 'ERROR' ? 'text-red-500' : 'text-blue-500'}`}>{log.level}</td>
                                                 <td className="p-2 opacity-80">{log.service}</td>
-                                                <td className={`p-2 font-bold ${log.metadata?.status >= 400 ? 'text-red-500' :
-                                                    log.metadata?.status >= 200 ? 'text-green-500' : 'opacity-50'
-                                                    }`}>
-                                                    {log.metadata?.status || '-'}
-                                                </td>
-                                                <td className="p-2">
-                                                    <div className="max-w-[500px] truncate" title={log.message}>
-                                                        {log.message}
-                                                    </div>
-                                                    {log.metadata && (
-                                                        <div className="text-[10px] opacity-50 mt-1">
-                                                            {JSON.stringify(log.metadata).substring(0, 100)}...
-                                                        </div>
-                                                    )}
-                                                </td>
+                                                <td className="p-2 truncate max-w-[300px]">{log.message}</td>
                                             </tr>
                                         ))}
                                 </tbody>
