@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Search, Terminal, Book, Cpu, Shield, Activity, GitBranch, Database, Zap, Layout } from 'lucide-react';
+import { X, Search, Terminal, Book, Cpu, Shield, Activity, GitBranch, Database, Zap, Layout, MessageSquare } from 'lucide-react';
 
 interface UserManualProps {
     isOpen: boolean;
@@ -39,6 +39,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
 
     const sections = [
         { id: 'overview', label: 'Overview', icon: <Activity className="w-4 h-4" /> },
+        { id: 'chat-features', label: 'Chat Features', icon: <MessageSquare className="w-4 h-4" /> },
         { id: 'interface', label: 'Interface & Tools', icon: <Layout className="w-4 h-4" /> },
         { id: 'devops-suite', label: 'DevOps Suite', icon: <Cpu className="w-4 h-4" /> },
         { id: 'workflows', label: 'Agentic Flows', icon: <Zap className="w-4 h-4" /> },
@@ -81,6 +82,79 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                     </div>
                 );
 
+
+
+            case 'chat-features':
+                return (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
+                        <h2 className={`text-2xl font-bold ${themeColors.heading}`}>Chat Capabilities</h2>
+
+                        {/* Session Management */}
+                        <div className={`p-6 rounded-xl border ${themeColors.border} ${isTerminalMode ? 'bg-black' : 'bg-white shadow-sm'}`}>
+                            <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${themeColors.heading}`}>
+                                <Database className="w-5 h-5" /> Session Management
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <h4 className={`font-bold text-sm ${themeColors.text}`}>Create & Switch</h4>
+                                    <ul className={`text-xs opacity-70 space-y-1 list-disc pl-4 ${themeColors.text}`}>
+                                        <li><strong>New Chat:</strong> Click the "New Chat" button in the sidebar or use the command palette (`Ctrl+K` then `N`).</li>
+                                        <li><strong>Switch:</strong> Click any session in the sidebar sidebar to jump between threads.</li>
+                                    </ul>
+                                </div>
+                                <div className="space-y-2">
+                                    <h4 className={`font-bold text-sm ${themeColors.text}`}>Organize (Hover Actions)</h4>
+                                    <ul className={`text-xs opacity-70 space-y-1 list-disc pl-4 ${themeColors.text}`}>
+                                        <li><strong>Rename:</strong> Hover over a session and click the <span className="font-mono">[Edit]</span> icon to rename it.</li>
+                                        <li><strong>Delete:</strong> Hover and click <span className="font-mono">[Trash]</span> to permanently remove a thread.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Message Actions */}
+                        <div className={`p-6 rounded-xl border ${themeColors.border} ${isTerminalMode ? 'bg-black' : 'bg-white shadow-sm'}`}>
+                            <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${themeColors.heading}`}>
+                                <MessageSquare className="w-5 h-5" /> Message Actions
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <h4 className={`font-bold text-sm ${themeColors.text}`}>Edit & Regenerate</h4>
+                                    <p className={`text-xs opacity-70 ${themeColors.text}`}>
+                                        Hover over any of your messages and click the <span className="font-mono">[Pencil]</span> icon. Modifying a message will <strong>truncate</strong> the conversation to that point and regenerate the response.
+                                    </p>
+                                </div>
+                                <div className="space-y-2">
+                                    <h4 className={`font-bold text-sm ${themeColors.text}`}>Copy Output</h4>
+                                    <p className={`text-xs opacity-70 ${themeColors.text}`}>
+                                        Click the <span className="font-mono">[Copy]</span> icon on any AI response to copy the full markdown content to your clipboard.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        {/* Power Tools */}
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className={`p-6 rounded-xl border ${themeColors.border} ${isTerminalMode ? 'bg-black' : 'bg-white shadow-sm'}`}>
+                                <div className="mb-3"><Book className={`w-6 h-6 ${themeColors.heading}`} /></div>
+                                <h4 className={`font-bold mb-2 ${themeColors.heading}`}>Prompt Library</h4>
+                                <p className={`text-xs opacity-70 ${themeColors.text}`}>
+                                    Access a library of pre-saved prompts and snippets. Save commonly used commands or queries for quick access.
+                                </p>
+                            </div>
+
+                            <div className={`p-6 rounded-xl border ${themeColors.border} ${isTerminalMode ? 'bg-black' : 'bg-white shadow-sm'}`}>
+                                <div className="mb-3"><Search className={`w-6 h-6 ${themeColors.heading}`} /></div>
+                                <h4 className={`font-bold mb-2 ${themeColors.heading}`}>Next Actions</h4>
+                                <p className={`text-xs opacity-70 ${themeColors.text}`}>
+                                    The "Suggestion Rail" at the bottom provides AI-generated follow-up questions to help dive deeper into a topic.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                );
             case 'interface':
                 return (
                     <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
@@ -110,18 +184,34 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6">
-                            <div className={`p-4 rounded-xl border ${themeColors.border} ${isTerminalMode ? 'bg-black' : 'bg-white'}`}>
-                                <h4 className={`font-mono font-bold mb-2 ${themeColors.heading}`}>Terminal Mode</h4>
-                                <p className={`${themeColors.text} opacity-60 text-xs`}>
-                                    High-contrast, scanlines, and monospaced fonts for the true hacker aesthetic.
-                                </p>
-                            </div>
-                            <div className={`p-4 rounded-xl border ${themeColors.border} ${isTerminalMode ? 'bg-black' : 'bg-white'}`}>
-                                <h4 className={`font-sans font-bold mb-2 ${themeColors.heading}`}>Glass Mode</h4>
-                                <p className={`${themeColors.text} opacity-60 text-xs`}>
-                                    Modern, clean, and beautiful glassmorphism design for a premium experience.
-                                </p>
+                        {/* Modes */}
+                        <div className={`p-6 rounded-xl border ${themeColors.border} ${isTerminalMode ? 'bg-black' : 'bg-white shadow-sm'}`}>
+                            <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${themeColors.heading}`}>
+                                <Layout className="w-5 h-5" /> UI Experience Modes
+                            </h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                <div className="flex items-start gap-3">
+                                    <div className={`mt-1 p-1 rounded ${isTerminalMode ? 'bg-green-900/30' : 'bg-stc-purple/10'}`}>
+                                        <div className="w-4 h-4 rounded-full border border-current"></div>
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-bold text-sm ${themeColors.text}`}>Zen Mode</h4>
+                                        <p className={`text-xs opacity-70 ${themeColors.text}`}>
+                                            Toggle via the header button or <code>Ctrl+K Z</code>. Hides the sidebar and maximizes the chat area for deep focus.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <div className={`mt-1 p-1 rounded ${isTerminalMode ? 'bg-green-900/30' : 'bg-stc-purple/10'}`}>
+                                        <Terminal className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-bold text-sm ${themeColors.text}`}>Terminal vs. GUI</h4>
+                                        <p className={`text-xs opacity-70 ${themeColors.text}`}>
+                                            Switch between the hacker-style <strong>Terminal Mode</strong> (Green/Black) and the modern <strong>GUI Mode</strong> (Purple/White/Glass) using the header toggle.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -183,19 +273,106 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                             {sections.find(s => s.id === activeSection)?.label}
                         </h2>
                         {activeSection === 'devops-suite' && (
-                            <div className="grid gap-4">
+                            <div className="space-y-8">
+                                <p className={`${themeColors.text} opacity-70 mb-4`}>
+                                    The following tools are integrated via the Model Context Protocol (MCP). The AI can perform these specific actions when you ask.
+                                </p>
                                 {[
-                                    { name: 'Jenkins', desc: 'CI/CD Pipelines & Build Status' },
-                                    { name: 'Jira', desc: 'Issue Tracking & Project Management' },
-                                    { name: 'SonarQube', desc: 'Code Quality & Security Gates' },
-                                    { name: 'Nexus', desc: 'Artifact Management' },
-                                    { name: 'Bitbucket', desc: 'Source Control & PRs' },
-                                    { name: 'Elasticsearch', desc: 'Log Aggregation & Search' },
-                                    { name: 'Grafana', desc: 'Observability Dashboards' }
+                                    {
+                                        name: 'Jenkins',
+                                        desc: 'CI/CD Pipelines & Build Status',
+                                        icon: <Activity className="w-5 h-5" />,
+                                        tools: [
+                                            { id: 'list_jobs', desc: 'List all jobs with status' },
+                                            { id: 'build_job', desc: 'Trigger a build for a specific job' },
+                                            { id: 'get_build_status', desc: 'Get success/failure status of a build' }
+                                        ]
+                                    },
+                                    {
+                                        name: 'Jira',
+                                        desc: 'Issue Tracking & Project Management',
+                                        icon: <Database className="w-5 h-5" />,
+                                        tools: [
+                                            { id: 'get_project_details', desc: 'Get details of the DevOps project' },
+                                            { id: 'get_issue', desc: 'Get details of a specific issue' },
+                                            { id: 'summarize_issue', desc: 'Get AI-generated issue summary' },
+                                            { id: 'get_issue_comments', desc: 'Read issue comments' }
+                                        ]
+                                    },
+                                    {
+                                        name: 'SonarQube',
+                                        desc: 'Code Quality & Security Gates',
+                                        icon: <Shield className="w-5 h-5" />,
+                                        tools: [
+                                            { id: 'get_project_overview', desc: 'Get metrics and dashboard URL' },
+                                            { id: 'get_quality_gate', desc: 'Check Quality Gate status' },
+                                            { id: 'search_code_smells', desc: 'Find code smells in a project' },
+                                            { id: 'search_vulnerabilities', desc: 'Find security vulnerabilities' }
+                                        ]
+                                    },
+                                    {
+                                        name: 'Bitbucket',
+                                        desc: 'Source Control & PRs',
+                                        icon: <GitBranch className="w-5 h-5" />,
+                                        tools: [
+                                            { id: 'list_repos', desc: 'List repositories in a project' },
+                                            { id: 'get_pull_requests', desc: 'List open/merged pull requests' },
+                                            { id: 'get_file_content', desc: 'Read file content (read-only)' }
+                                        ]
+                                    },
+                                    {
+                                        name: 'Nexus',
+                                        desc: 'Artifact Management',
+                                        icon: <Database className="w-5 h-5" />,
+                                        tools: [
+                                            { id: 'list_repos', desc: 'List all repositories' },
+                                            { id: 'search_artifacts', desc: 'Search for artifacts by query' },
+                                            { id: 'get_component', desc: 'Get component details' }
+                                        ]
+                                    },
+                                    {
+                                        name: 'Elasticsearch',
+                                        desc: 'Log Aggregation & Search',
+                                        icon: <Search className="w-5 h-5" />,
+                                        tools: [
+                                            { id: 'get_cluster_health', desc: 'Check cluster health status' },
+                                            { id: 'list_indices', desc: 'List available indices' },
+                                            { id: 'search_logs', desc: 'Search logs (Lucene syntax)' }
+                                        ]
+                                    },
+                                    {
+                                        name: 'Grafana',
+                                        desc: 'Observability Dashboards',
+                                        icon: <Activity className="w-5 h-5" />,
+                                        tools: [
+                                            { id: 'search_dashboards', desc: 'Search for dashboards' },
+                                            { id: 'get_dashboard', desc: 'Get dashboard details by UID' },
+                                            { id: 'list_datasources', desc: 'List available data sources' }
+                                        ]
+                                    }
                                 ].map(tool => (
-                                    <div key={tool.name} className={`p-4 rounded-lg border flex items-center justify-between ${themeColors.border} ${isTerminalMode ? 'bg-gray-900/50' : 'bg-white'}`}>
-                                        <span className={`font-bold ${themeColors.text}`}>{tool.name}</span>
-                                        <span className={`text-xs opacity-60 ${themeColors.text}`}>{tool.desc}</span>
+                                    <div key={tool.name} className={`rounded-xl border ${themeColors.border} overflow-hidden ${isTerminalMode ? 'bg-gray-900/30' : 'bg-white shadow-sm'}`}>
+                                        <div className={`p-4 border-b ${themeColors.border} flex items-center justify-between bg-opacity-50`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-lg ${isTerminalMode ? 'bg-green-900/30 text-green-400' : 'bg-stc-purple/10 text-stc-purple'}`}>
+                                                    {tool.icon}
+                                                </div>
+                                                <div>
+                                                    <h3 className={`font-bold ${themeColors.heading}`}>{tool.name}</h3>
+                                                    <p className={`text-xs opacity-60 ${themeColors.text}`}>{tool.desc}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {tool.tools.map(t => (
+                                                <div key={t.id} className="flex items-start gap-2 text-sm">
+                                                    <code className={`px-1.5 py-0.5 rounded text-xs font-mono whitespace-nowrap ${isTerminalMode ? 'bg-black border border-green-900/50 text-green-400' : 'bg-gray-100 text-stc-purple-deep'}`}>
+                                                        {t.id}
+                                                    </code>
+                                                    <span className={`text-xs opacity-70 ${themeColors.text}`}>{t.desc}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
