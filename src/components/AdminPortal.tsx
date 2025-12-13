@@ -47,7 +47,7 @@ interface AdminPortalProps {
 export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMode, embedded }) => {
     const [activeTab, setActiveTab] = useState<'mission' | 'quality' | 'security' | 'logs'>('mission');
     const [logFilter, setLogFilter] = useState('ALL');
-    const [timeRange, setTimeRange] = useState<'1H' | '6H' | '24H' | '7D'>('1H');
+    const [timeRange, setTimeRange] = useState<'1H' | '6H' | '24H' | '7D' | 'Custom'>('24H');
     const [golden, setGolden] = useState<GoldenSignals | null>(null);
     const [logs, setLogs] = useState<any[]>([]);
     const [securityEvents, setSecurityEvents] = useState<any[]>([]);
@@ -111,24 +111,44 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
     }, [timeRange]);
 
     const [error, setError] = useState<string | null>(null);
+    const [customStart, setCustomStart] = useState<number | null>(null);
+    const [customEnd, setCustomEnd] = useState<number | null>(null);
 
     const fetchSignals = async (isBackground = false) => {
         if (!isBackground) setLoading(true);
-        // Clear error only on manual refresh (not background polling) to avoid flickering error -> success
         if (!isBackground) setError(null);
+
+        // Calculate Time Window
+        const now = Date.now();
+        let start = now - 3600000; // Default 1H
+        let end = now;
+
+        if (timeRange === 'Custom') {
+            if (!customStart || !customEnd) {
+                // Determine sensible default if not set yet, or wait for user?
+                // For now, let's keep previous logic if incomplete, or just default to 24h
+                if (!isBackground) setLoading(false);
+                return; // Wait for user input
+            }
+            start = customStart;
+            end = customEnd;
+        } else {
+            const map: any = { '1H': 3600000, '6H': 21600000, '24H': 86400000, '7D': 604800000 };
+            start = now - (map[timeRange] || 3600000);
+        }
 
         try {
             try {
+                const params = `?start=${start}&end=${end}`;
                 const [statsRes, logRes, secRes] = await Promise.all([
-                    fetch('/api/admin/stats/golden'),
-                    fetch('/api/admin/logs'),
-                    fetch('/api/admin/security/events')
+                    fetch(`/api/admin/stats/golden${params}`),
+                    fetch(`/api/admin/logs${params}`),
+                    fetch(`/api/admin/security/events${params}`)
                 ]);
 
                 if (statsRes.ok) {
                     const data = await statsRes.json();
                     setGolden(data);
-                    // If we got data successfully, clear any previous errors
                     setError(null);
                 } else {
                     setGolden(null);
@@ -155,7 +175,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
         fetchSignals();
         const interval = setInterval(() => fetchSignals(true), 5000);
         return () => clearInterval(interval);
-    }, [timeRange]);
+    }, [timeRange, customStart, customEnd]);
 
     const themeColor = isTerminalMode ? '#22c55e' : '#8b5cf6';
 
@@ -227,18 +247,35 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onClose, isTerminalMod
                 {/* Right: Controls & Time Filter */}
                 <div className="flex items-center gap-3">
                     {/* Time Range Selector */}
-                    <div className={`flex items-center rounded-md border text-[10px] font-bold overflow-hidden ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'}`}>
-                        {['1H', '6H', '24H', '7D'].map(range => (
-                            <button
-                                key={range}
-                                onClick={() => setTimeRange(range as any)}
-                                className={`px-3 py-1.5 transition-colors ${timeRange === range
-                                    ? (isTerminalMode ? 'bg-green-500/20 text-green-400' : 'bg-indigo-50 text-indigo-600')
-                                    : (isTerminalMode ? 'hover:bg-green-900/20 text-green-700' : 'hover:bg-slate-50 text-slate-400')}`}
-                            >
-                                {range}
-                            </button>
-                        ))}
+                    <div className="flex items-center gap-2">
+                        {timeRange === 'Custom' && (
+                            <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-2">
+                                <input
+                                    type="datetime-local"
+                                    className={`text-[10px] p-1 rounded border ${isTerminalMode ? 'bg-black border-green-500/30 text-green-500' : 'bg-white border-slate-200'}`}
+                                    onChange={(e) => setCustomStart(new Date(e.target.value).getTime())}
+                                />
+                                <span className="text-[10px] opacity-50">-</span>
+                                <input
+                                    type="datetime-local"
+                                    className={`text-[10px] p-1 rounded border ${isTerminalMode ? 'bg-black border-green-500/30 text-green-500' : 'bg-white border-slate-200'}`}
+                                    onChange={(e) => setCustomEnd(new Date(e.target.value).getTime())}
+                                />
+                            </div>
+                        )}
+                        <div className={`flex items-center rounded-md border text-[10px] font-bold overflow-hidden ${isTerminalMode ? 'border-green-500/30' : 'border-slate-200'}`}>
+                            {['1H', '6H', '24H', '7D', 'Custom'].map(range => (
+                                <button
+                                    key={range}
+                                    onClick={() => setTimeRange(range as any)}
+                                    className={`px-3 py-1.5 transition-colors ${timeRange === range
+                                        ? (isTerminalMode ? 'bg-green-500/20 text-green-400' : 'bg-indigo-50 text-indigo-600')
+                                        : (isTerminalMode ? 'hover:bg-green-900/20 text-green-700' : 'hover:bg-slate-50 text-slate-400')}`}
+                                >
+                                    {range}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {!embedded && (

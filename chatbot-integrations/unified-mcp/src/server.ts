@@ -336,7 +336,19 @@ app.post('/metrics/session', async (req, res) => {
 // 2. Admin Ops (Read)
 app.get('/admin/stats/golden', async (req, res) => {
     try {
-        // Aggregation for Executive View
+        const { start, end } = req.query;
+        // Default to last 24h if not specified
+        const endTime = end ? parseInt(end as string) : Date.now();
+        const startTime = start ? parseInt(start as string) : endTime - 86400000;
+
+        // Common WHERE clause for time filtering
+        // For BIGINT timestamps (llm_metrics, tool_usage, user_sessions)
+        const bigIntTimeFilter = `WHERE timestamp >= ${startTime} AND timestamp <= ${endTime}`;
+        const sessionTimeFilter = `WHERE start_time >= ${startTime} AND start_time <= ${endTime}`;
+
+        // For TIMESTAMPTZ timestamps (system_logs, security_events, user_feedback)
+        const sqlTimeFilter = `WHERE timestamp >= to_timestamp(${startTime}/1000.0) AND timestamp <= to_timestamp(${endTime}/1000.0)`;
+
         // Cost Assumption: $5.00 / 1M Input Tokens, $15.00 / 1M Output Tokens (Approximation)
         const INPUT_COST_PER_MILLION = 5.00;
         const OUTPUT_COST_PER_MILLION = 15.00;
@@ -347,35 +359,36 @@ app.get('/admin/stats/golden', async (req, res) => {
                 AVG(duration_ms) as avg_latency,
                 AVG(ttft_ms) as avg_ttft,
                 SUM(CASE WHEN success = true THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*),0) as success_rate
-                FROM llm_metrics`),
+                FROM llm_metrics ${bigIntTimeFilter}`),
             query(`SELECT 
                 COUNT(*) as total_tools,
                 AVG(duration_ms) as avg_tool_latency,
                 SUM(CASE WHEN success = true THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*),0) as success_rate,
                 SUM(CASE WHEN error_msg LIKE '%Timeout%' OR duration_ms > 30000 THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*),0) as timeout_rate
-                FROM tool_usage`),
+                FROM tool_usage ${bigIntTimeFilter}`),
             query(`SELECT 
                 level, COUNT(*) as count 
                 FROM system_logs 
-                WHERE level IN ('ERROR', 'WARN') 
+                ${sqlTimeFilter} AND level IN ('ERROR', 'WARN') 
                 GROUP BY level`),
             query(`SELECT 
                 COUNT(DISTINCT user_id) as dau,
                 COUNT(*) as total_sessions 
                 FROM user_sessions 
-                WHERE start_time > (EXTRACT(EPOCH FROM NOW()) * 1000 - 86400000)`),
+                ${sessionTimeFilter}`),
             query(`SELECT 
                 SUM(input_tokens) as total_input,
                 SUM(output_tokens) as total_output,
                 COUNT(DISTINCT session_id) as affected_sessions
-                FROM llm_metrics`),
-            query(`SELECT tool_name, COUNT(DISTINCT session_id) as unique_users FROM tool_usage GROUP BY tool_name`),
+                FROM llm_metrics ${bigIntTimeFilter}`),
+            query(`SELECT tool_name, COUNT(DISTINCT session_id) as unique_users FROM tool_usage ${bigIntTimeFilter} GROUP BY tool_name`),
             query(`SELECT 
                 AVG(request_count) as avg_prompts_per_session
-                FROM (SELECT session_id, COUNT(*) as request_count FROM llm_metrics GROUP BY session_id) as sub`),
+                FROM (SELECT session_id, COUNT(*) as request_count FROM llm_metrics ${bigIntTimeFilter} GROUP BY session_id) as sub`),
             query(`WITH UserHistory AS (
                     SELECT user_id, COUNT(DISTINCT DATE(to_timestamp(start_time/1000))) as active_days 
                     FROM user_sessions 
+                    ${sessionTimeFilter}
                     GROUP BY user_id
                 )
                 SELECT 
@@ -383,12 +396,12 @@ app.get('/admin/stats/golden', async (req, res) => {
                 FROM UserHistory`),
             query(`SELECT 
                 SUM(CASE WHEN metadata->>'grounded' = 'true' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*),0) as grounded_rate
-                FROM llm_metrics WHERE metadata->>'grounded' IS NOT NULL`),
-            query(`SELECT AVG((metadata->>'loadTime')::float) as avg_load_time FROM system_logs WHERE message = 'UI_LOAD_PERFORMANCE'`),
+                FROM llm_metrics ${bigIntTimeFilter} AND metadata->>'grounded' IS NOT NULL`),
+            query(`SELECT AVG((metadata->>'loadTime')::float) as avg_load_time FROM system_logs ${sqlTimeFilter} AND message = 'UI_LOAD_PERFORMANCE'`),
             query(`SELECT 
                 SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*),0) as positive_feedback_rate
-                FROM user_feedback`),
-            query(`SELECT COUNT(*) as security_incidents FROM security_events`)
+                FROM user_feedback ${sqlTimeFilter}`),
+            query(`SELECT COUNT(*) as security_incidents FROM security_events ${sqlTimeFilter}`)
         ]);
 
         const inputTokens = parseFloat(costStats.rows[0].total_input || '0');
