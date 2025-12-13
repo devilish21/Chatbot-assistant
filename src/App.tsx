@@ -5,14 +5,12 @@ import { SessionSidebar } from './components/SessionSidebar';
 
 import CommandPalette from './components/CommandPalette';
 import { UserManual } from './components/UserManual';
+import { FeedbackModal } from './components/FeedbackModal';
 import { ToastContainer } from './components/Toast';
 import { PromptLibrary } from './components/PromptLibrary';
-import { AdminPanel } from './components/AdminPanel';
-import { AdminPortal } from './components/AdminPortal';
-import { AdminDashboard } from './components/AdminDashboard';
 import { AppConfig, ChatSession, Toast, Snippet, Category } from './types';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { DEFAULT_CONFIG, DEFAULT_SNIPPETS } from './constants';
-
 import { mcpService } from './services/mcpService';
 import { metricsService } from './services/metricsService';
 
@@ -20,7 +18,15 @@ const STORAGE_KEY = 'devops_chatbot_sessions';
 const SNIPPETS_KEY = 'devops_chatbot_snippets';
 const CONFIG_KEY = 'devops_chatbot_config';
 
-import { AdminLogin } from './components/AdminLogin';
+const AdminPanel = React.lazy(() => import('./components/AdminPanel').then(module => ({ default: module.AdminPanel })));
+const AdminLogin = React.lazy(() => import('./components/AdminLogin').then(module => ({ default: module.AdminLogin })));
+
+// Loading fallback for lazy components
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
 
 const App: React.FC = () => {
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
@@ -38,8 +44,8 @@ const App: React.FC = () => {
 
   // UI Visibility States
   const [showManual, setShowManual] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false); // Legacy internal modal toggle (mostly unused now for admin)
-  const [showDashboard, setShowDashboard] = useState(false);
   const [showPromptLibrary, setShowPromptLibrary] = useState(false);
 
   useEffect(() => {
@@ -78,35 +84,15 @@ const App: React.FC = () => {
     const savedConfig = localStorage.getItem(CONFIG_KEY);
     if (savedConfig) {
       try {
-        // We merge saved config with DEFAULT_CONFIG to ensure new keys in constants.ts are picked up
-        setConfig(prev => ({ ...prev, ...JSON.parse(savedConfig) }));
-      } catch (e) { console.error("Config parse error", e); }
+        const parsed = JSON.parse(savedConfig);
+        // Ensure defaults for new fields
+        setConfig({ ...DEFAULT_CONFIG, ...parsed });
+      } catch (e) {
+        console.error("Failed to parse config", e);
+      }
     }
 
-    // B. Load Sessions (Non-blocking parsing)
-    // We use a timeout to allow the initial UI to paint before parsing potentially large JSON
-    setTimeout(() => {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setSessions(parsed);
-            setActiveSessionId(parsed[0].id);
-          } else {
-            createNewSession(false);
-          }
-        } catch (e) {
-          console.error("Failed to parse sessions", e);
-          createNewSession(false);
-        }
-      } else {
-        createNewSession(false);
-      }
-      setIsLoaded(true);
-    }, 10);
-
-
+    // Load Snippets
     // C. Load Snippets with Versioning
     const savedSnippets = localStorage.getItem(SNIPPETS_KEY);
     const savedVersion = localStorage.getItem(SNIPPETS_KEY + '_version');
@@ -150,6 +136,46 @@ const App: React.FC = () => {
       localStorage.setItem(SNIPPETS_KEY, JSON.stringify(combined));
       localStorage.setItem(SNIPPETS_KEY + '_version', currentVersion);
     }
+
+    // Load Sessions
+    const savedSessions = localStorage.getItem(STORAGE_KEY);
+    if (savedSessions) {
+      try {
+        const parsed: ChatSession[] = JSON.parse(savedSessions);
+        setSessions(parsed);
+        // Restore last session if available
+        if (parsed.length > 0) {
+          // Check for most recent
+          const mostRecent = parsed.sort((a, b) => b.timestamp - a.timestamp)[0]; // Changed from updatedAt to timestamp
+          setActiveSessionId(mostRecent.id);
+        } else {
+          // Will create new in next effect if needed
+        }
+      } catch (e) {
+        console.error("Failed to parse sessions", e);
+      }
+    }
+
+    setIsLoaded(true);
+  }, []);
+
+  // Create first session if none exist after load
+  useEffect(() => {
+    if (isLoaded && sessions.length === 0) {
+      createNewSession(false);
+    }
+  }, [isLoaded, sessions.length]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Global Shortcuts
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        // Toggle command palette? (Not implemented in this snippet, but placeholder)
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // 2. Persistence Effects
@@ -187,74 +213,77 @@ const App: React.FC = () => {
     if (!ctx) return;
 
     // Set explicit dimensions
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const setCanvasSize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    setCanvasSize();
 
     const chars = '01ABCDEFSTC';
     const fontSize = 14;
     const columns = Math.ceil(canvas.width / fontSize);
     const drops: number[] = new Array(columns).fill(1);
 
-    const draw = () => {
-      ctx.fillStyle = isTerminalMode ? 'rgba(0, 0, 0, 0.1)' : 'rgba(249, 247, 252, 0.1)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    let animationFrameId: number;
+    let lastDraw = 0;
+    const fps = 24; // Lower FPS for matrix feel & performance
+    const interval = 1000 / fps;
 
-      ctx.fillStyle = isTerminalMode ? '#22c55e' : '#4F008C';
-      ctx.font = `${fontSize}px monospace`;
+    const draw = (timestamp: number) => {
+      if (timestamp - lastDraw >= interval) {
+        lastDraw = timestamp;
 
-      for (let i = 0; i < drops.length; i++) {
-        const text = chars.charAt(Math.floor(Math.random() * chars.length));
-        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        ctx.fillStyle = isTerminalMode ? 'rgba(0, 0, 0, 0.1)' : 'rgba(249, 247, 252, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-          drops[i] = 0;
+        ctx.fillStyle = isTerminalMode ? '#22c55e' : '#4F008C';
+        ctx.font = `${fontSize}px monospace`;
+
+        for (let i = 0; i < drops.length; i++) {
+          const text = chars.charAt(Math.floor(Math.random() * chars.length));
+          ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+          if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+            drops[i] = 0;
+          }
+          drops[i]++;
         }
-        drops[i]++;
       }
+      animationFrameId = requestAnimationFrame(draw);
     };
 
-    const interval = setInterval(draw, 50);
+    animationFrameId = requestAnimationFrame(draw);
 
     const handleResize = () => {
-      if (canvas) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      }
+      setCanvasSize();
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
-      clearInterval(interval);
+      cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
   }, [isTerminalMode, config.enableVisualEffects]);
 
   const createNewSession = (shouldToast = true) => {
     const welcomeMsg = config.welcomeMessage || DEFAULT_CONFIG.welcomeMessage;
-
     const newSession: ChatSession = {
       id: Date.now().toString(),
-      title: 'New Session',
-      timestamp: Date.now(),
-      messages: [
-        {
-          id: 'welcome',
-          role: 'model',
-          content: welcomeMsg,
-          timestamp: Date.now()
-        }
-      ],
-      suggestions: []
+      title: 'New Session', // Added back title
+      messages: [{ id: '1', role: 'model', content: welcomeMsg, timestamp: Date.now() }], // Changed role to model
+      timestamp: Date.now(), // Added back timestamp
+      suggestions: [], // Added back suggestions
+      updatedAt: Date.now()
     };
-    setSessions(prev => [newSession, ...prev]);
+    setSessions(prev => [newSession, ...prev]); // Changed to prepend new session
     setActiveSessionId(newSession.id);
-    if (shouldToast && isLoaded) addToast('New session created', 'info');
+    if (shouldToast && isLoaded) addToast("New session created", 'info'); // Changed toast type to info
   };
 
   const handleUpdateSession = (updates: Partial<ChatSession>) => {
     setSessions(prev => prev.map(session => {
       if (session.id === activeSessionId) {
-        const updatedSession = { ...session, ...updates };
+        const updatedSession = { ...session, ...updates, updatedAt: Date.now() }; // Added updatedAt
         if (session.title === 'New Session') {
           const firstUserMsg = updatedSession.messages.find(m => m.role === 'user');
           if (firstUserMsg) {
@@ -323,32 +352,42 @@ const App: React.FC = () => {
   const highlightClass = isTerminalMode ? "text-green-400 font-bold" : "text-stc-coral font-bold";
   const dividerClass = isTerminalMode ? "border-green-500/30" : "border-stc-purple/10";
 
+
+  // ... (existing helper functions)
+
   // --- ROUTING: ADMIN VIEW ---
   if (currentPath === '/admin') {
     if (!isAdminAuthenticated) {
       return (
-        <AdminLogin
-          onLogin={() => setIsAdminAuthenticated(true)}
-          isTerminalMode={isTerminalMode}
-        />
+        <ErrorBoundary isTerminalMode={isTerminalMode}>
+          <React.Suspense fallback={<LoadingSpinner />}>
+            <AdminLogin
+              onLogin={() => setIsAdminAuthenticated(true)}
+              isTerminalMode={isTerminalMode}
+            />
+          </React.Suspense>
+        </ErrorBoundary>
       );
     }
     // Authenticated Admin View
     return (
-      <AdminPanel
-        isOpen={true} // Always open
-        onClose={() => {
-          // Reset routing and auth state to exit
-          window.history.pushState({}, '', '/');
-          setCurrentPath('/');
-          setIsAdminAuthenticated(false);
-        }}
-        config={config}
-        onSaveConfig={(newConfig) => setConfig(newConfig)}
-        isTerminalMode={isTerminalMode}
-        addToast={addToast}
-        onOpenMetrics={() => setShowDashboard(true)} // Can be removed or ignored
-      />
+      <ErrorBoundary isTerminalMode={isTerminalMode}>
+        <React.Suspense fallback={<LoadingSpinner />}>
+          <AdminPanel
+            isOpen={true} // Always open
+            onClose={() => {
+              // Reset routing and auth state to exit
+              window.history.pushState({}, '', '/');
+              setCurrentPath('/');
+              setIsAdminAuthenticated(false);
+            }}
+            config={config}
+            onSaveConfig={(newConfig) => setConfig(newConfig)}
+            isTerminalMode={isTerminalMode}
+            addToast={addToast}
+          />
+        </React.Suspense>
+      </ErrorBoundary>
     );
   }
 
@@ -493,6 +532,15 @@ const App: React.FC = () => {
               <span className="font-bold text-xs">?</span>
               <span className="text-[10px] font-bold uppercase tracking-wider">Manual</span>
             </button>
+
+            <button
+              onClick={() => setShowFeedbackModal(true)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${isTerminalMode ? 'border-green-500 text-green-500 hover:bg-green-900/30' : 'border-stc-purple/20 text-stc-purple hover:bg-stc-purple hover:text-white'}`}
+              title="Submit Requirements"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span className="text-[10px] font-bold uppercase tracking-wider">Feedback</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -568,6 +616,13 @@ const App: React.FC = () => {
         </div>
 
       </main>
+
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        isTerminalMode={isTerminalMode}
+      />
+
     </div>
   );
 };

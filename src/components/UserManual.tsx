@@ -42,6 +42,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
         { id: 'chat-features', label: 'Chat Features', icon: <MessageSquare className="w-4 h-4" /> },
         { id: 'interface', label: 'Interface & Tools', icon: <Layout className="w-4 h-4" /> },
         { id: 'devops-suite', label: 'DevOps Suite', icon: <Cpu className="w-4 h-4" /> },
+        { id: 'mission-control', label: 'Mission Control', icon: <Activity className="w-4 h-4" /> },
         { id: 'workflows', label: 'Agentic Flows', icon: <Zap className="w-4 h-4" /> },
         { id: 'commands', label: 'Commands', icon: <Terminal className="w-4 h-4" /> },
     ];
@@ -211,6 +212,85 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
                                             Switch between the hacker-style <strong>Terminal Mode</strong> (Green/Black) and the modern <strong>GUI Mode</strong> (Purple/White/Glass) using the header toggle.
                                         </p>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+
+            case 'mission-control':
+                return (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
+                        <h2 className={`text-2xl font-bold ${themeColors.heading}`}>Mission Control Center</h2>
+                        <p className={`${themeColors.text} opacity-80`}>
+                            A comprehensive dashboard for monitoring your chatbot's health, analyzing logs, and reviewing user feedback. Access it via the <code>/admin</code> command or the header icon.
+                        </p>
+
+                        <div className="grid grid-cols-1 gap-6">
+                            {/* Log Explorer */}
+                            <div className={`p-6 rounded-xl border ${themeColors.border} ${isTerminalMode ? 'bg-black' : 'bg-white shadow-sm'}`}>
+                                <h3 className={`text-lg font-semibold mb-3 flex items-center gap-2 ${themeColors.heading}`}>
+                                    <Terminal className="w-5 h-5" /> Advanced Log Explorer
+                                </h3>
+                                <p className={`text-sm opacity-70 mb-4 ${themeColors.text}`}>
+                                    Debug issues in real-time with powerful filtering tools.
+                                </p>
+                                <ul className={`grid grid-cols-1 md:grid-cols-3 gap-4 text-xs ${themeColors.text}`}>
+                                    <li className={`p-3 rounded border ${themeColors.border} bg-opacity-50`}>
+                                        <div className="font-bold mb-1">Search</div>
+                                        Filter logs by message content or metadata.
+                                    </li>
+                                    <li className={`p-3 rounded border ${themeColors.border} bg-opacity-50`}>
+                                        <div className="font-bold mb-1">Service Filter</div>
+                                        Isolate logs from specific components (Frontend, MCP, etc).
+                                    </li>
+                                    <li className={`p-3 rounded border ${themeColors.border} bg-opacity-50`}>
+                                        <div className="font-bold mb-1">Severity Toggles</div>
+                                        Quickly toggle INFO, WARN, and ERROR log visibility.
+                                    </li>
+                                </ul>
+                            </div>
+
+                            {/* Feedback & Alerts */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className={`p-6 rounded-xl border ${themeColors.border} ${isTerminalMode ? 'bg-black' : 'bg-white shadow-sm'}`}>
+                                    <h3 className={`text-lg font-semibold mb-3 flex items-center gap-2 ${themeColors.heading}`}>
+                                        <MessageSquare className="w-5 h-5" /> Feedback Inbox
+                                    </h3>
+                                    <p className={`text-sm opacity-70 ${themeColors.text}`}>
+                                        A dedicated tab to review user satisfaction.
+                                    </p>
+                                    <ul className={`mt-4 space-y-2 text-xs list-disc pl-4 opacity-70 ${themeColors.text}`}>
+                                        <li>View Thumbs Up/Down ratings.</li>
+                                        <li>Read qualitative user comments.</li>
+                                        <li>Correlate feedback with Message IDs.</li>
+                                    </ul>
+                                </div>
+
+                                <div className={`p-6 rounded-xl border ${themeColors.border} ${isTerminalMode ? 'bg-black' : 'bg-white shadow-sm'}`}>
+                                    <h3 className={`text-lg font-semibold mb-3 flex items-center gap-2 ${themeColors.heading}`}>
+                                        <Activity className="w-5 h-5" /> Visual Alerting
+                                    </h3>
+                                    <p className={`text-sm opacity-70 ${themeColors.text}`}>
+                                        Set your own performance thresholds.
+                                    </p>
+                                    <ul className={`mt-4 space-y-2 text-xs list-disc pl-4 opacity-70 ${themeColors.text}`}>
+                                        <li>Configure Max Latency (ms) and Min Success Rate (%) via the Gear icon.</li>
+                                        <li><strong>Visual Alarm:</strong> Metric cards pulse RED when thresholds are breached.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            {/* Export */}
+                            <div className={`p-4 rounded-xl border ${themeColors.border} flex items-center justify-between ${isTerminalMode ? 'bg-green-900/10' : 'bg-blue-50/50'}`}>
+                                <div>
+                                    <h4 className={`font-bold ${themeColors.text}`}>Data Export</h4>
+                                    <p className={`text-xs opacity-70 ${themeColors.text} mt-1`}>
+                                        Download your current view (Logs, Feedback, or Metrics) as a JSON report.
+                                    </p>
+                                </div>
+                                <div className={`p-2 rounded-lg ${isTerminalMode ? 'bg-green-500 text-black' : 'bg-stc-purple text-white'}`}>
+                                    <Database className="w-5 h-5" />
                                 </div>
                             </div>
                         </div>
@@ -445,7 +525,7 @@ export const UserManual: React.FC<UserManualProps> = ({ isOpen, onClose, isTermi
 
                     <div className={`p-6 border-t ${themeColors.border}`}>
                         <div className={`text-xs font-mono opacity-40 ${themeColors.text} text-center`}>
-                            v2.5.0-STABLE
+                            v2.6.0-STABLE
                         </div>
                     </div>
                 </div>

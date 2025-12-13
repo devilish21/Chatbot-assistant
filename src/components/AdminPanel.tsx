@@ -9,12 +9,11 @@ interface AdminPanelProps {
     onSaveConfig: (newConfig: AppConfig) => void;
     isTerminalMode: boolean;
     addToast: (msg: string, type: 'info' | 'success' | 'error') => void;
-    onOpenMetrics: () => void;
     isAuthenticated?: boolean;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
-    isOpen, onClose, config, onSaveConfig, isTerminalMode, addToast, onOpenMetrics
+    isOpen, onClose, config, onSaveConfig, isTerminalMode, addToast
 }) => {
     // Settings State
     const [localConfig, setLocalConfig] = useState<AppConfig>(config);

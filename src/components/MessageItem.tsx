@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Message } from '../types';
 import { CodeBlock } from './CodeBlock';
+import { FeedbackButtons } from './FeedbackButtons';
 
 interface MessageItemProps {
     message: Message;
@@ -295,11 +296,14 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
                                         {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                     </span>
                                 </div>
+                                {!isUser && !isStreaming && (
+                                    <FeedbackButtons messageId={message.id} isTerminalMode={isTerminalMode} />
+                                )}
                             </div>
-                            <div className={`text-sm leading-relaxed text-green-400 ${message.isError ? 'text-red-500' : ''}`}>
-                                {renderThinking(message.content)}
-                                {isStreaming && <span className="inline-block w-2 h-4 ml-1 align-middle cursor-blink bg-green-500"></span>}
-                            </div>
+                        </div>
+                        <div className={`text-sm leading-relaxed text-green-400 ${message.isError ? 'text-red-500' : ''}`}>
+                            {renderThinking(message.content)}
+                            {isStreaming && <span className="inline-block w-2 h-4 ml-1 align-middle cursor-blink bg-green-500"></span>}
                         </div>
                     </div>
                 </div>
@@ -339,6 +343,13 @@ export const MessageItem = React.memo(({ message, isStreaming, isTerminalMode, o
                         <span className="text-[10px] text-gray-400">
                             {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
+
+                        {!isUser && !isStreaming && (
+                            <div className="ml-2">
+                                <FeedbackButtons messageId={message.id} isTerminalMode={isTerminalMode} />
+                            </div>
+                        )}
+
                         {!isUser && (
                             <button onClick={handleCopy} className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stc-purple hover:text-stc-coral"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>

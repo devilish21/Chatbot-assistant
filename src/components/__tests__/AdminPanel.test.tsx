@@ -43,8 +43,7 @@ describe('AdminPanel', () => {
         sessions: [],
         isOpen: true,
         isTerminalMode: false,
-        addToast: vi.fn(),
-        onOpenMetrics: vi.fn()
+        addToast: vi.fn()
     };
 
     beforeEach(() => {

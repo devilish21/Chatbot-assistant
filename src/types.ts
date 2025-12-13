@@ -32,6 +32,7 @@ export interface ChatSession {
   messages: Message[];
   suggestions: string[];
   timestamp: number;
+  updatedAt?: number;
 }
 
 export enum ChatStatus {
